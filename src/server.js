@@ -78,7 +78,16 @@ async function startServer() {
   try {
     await pool.query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS contact_first_name VARCHAR(255)`);
     await pool.query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS contact_last_name VARCHAR(255)`);
-    console.log('✅ Database columns verified');
+    await pool.query(`CREATE TABLE IF NOT EXISTS otp_codes (
+      id SERIAL PRIMARY KEY,
+      email VARCHAR(255) NOT NULL,
+      code VARCHAR(6) NOT NULL,
+      registration_id INT REFERENCES registrations(id),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      used_at TIMESTAMPTZ,
+      expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '10 minutes')
+    )`);
+    console.log('✅ Database schema verified');
   } catch (e) {
     console.warn('⚠️ Migration check skipped:', e.message);
   }

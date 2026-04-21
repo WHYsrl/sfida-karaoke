@@ -306,6 +306,86 @@
     }
     .alert-error { background: var(--error-bg); border: 1px solid rgba(212,73,63,0.2); color: #e8a09b; display: block; }
     .alert-success { background: var(--success-bg); border: 1px solid rgba(74,158,110,0.2); color: #8fd4ad; display: block; }
+    .alert-warning {
+      background: rgba(201,168,76,0.08);
+      border: 1px solid rgba(201,168,76,0.2);
+      color: var(--gold);
+      display: block;
+    }
+    .alert .alert-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+    }
+    .alert .alert-btn {
+      padding: 7px 16px;
+      border-radius: 6px;
+      border: none;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .alert .alert-btn-primary {
+      background: var(--gold);
+      color: var(--bg);
+    }
+    .alert .alert-btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: var(--text-secondary);
+    }
+
+    /* ===== OTP SECTION ===== */
+    .otp-section {
+      text-align: center;
+      padding: 20px 0;
+    }
+    .otp-section p { color: var(--text-secondary); font-size: 13px; margin-bottom: 16px; }
+    .otp-input {
+      width: 200px !important;
+      text-align: center;
+      font-size: 24px !important;
+      letter-spacing: 8px;
+      font-weight: 600;
+      margin: 0 auto 16px;
+      display: block !important;
+    }
+    .otp-actions { display: flex; gap: 8px; justify-content: center; }
+    .otp-actions button {
+      padding: 10px 20px;
+      border-radius: var(--radius);
+      border: none;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-otp-verify { background: var(--gold); color: var(--bg); }
+    .btn-otp-cancel { background: rgba(255,255,255,0.06); color: var(--text-secondary); border: 1px solid var(--border) !important; }
+    .btn-otp-resend {
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 12px;
+      text-decoration: underline;
+      border: none;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    /* ===== EDIT MODE BANNER ===== */
+    .edit-banner {
+      background: var(--gold-subtle);
+      border: 1px solid rgba(201,168,76,0.2);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
     /* ===== SUCCESS VIEW ===== */
     .success-view {
@@ -400,6 +480,25 @@
 
   <div class="container">
     <div id="alert" class="alert"></div>
+
+    <!-- OTP VERIFICATION VIEW -->
+    <div id="otpView" class="hidden">
+      <div class="otp-section">
+        <div class="section-label">Verifica identita</div>
+        <p>Abbiamo inviato un codice a 6 cifre alla tua email.<br>Inseriscilo qui sotto per accedere alla tua candidatura.</p>
+        <input type="text" class="otp-input" id="otpInput" maxlength="6" placeholder="000000" autocomplete="one-time-code" inputmode="numeric">
+        <div class="otp-actions">
+          <button class="btn-otp-verify" onclick="verifyOtp()">Verifica</button>
+          <button class="btn-otp-cancel" onclick="cancelOtp()">Annulla</button>
+        </div>
+        <button class="btn-otp-resend" onclick="requestOtp()">Invia di nuovo il codice</button>
+      </div>
+    </div>
+
+    <!-- EDIT MODE BANNER -->
+    <div id="editBanner" class="edit-banner hidden">
+      &#9998; Stai modificando la tua candidatura esistente
+    </div>
 
     <form id="registrationForm">
 
@@ -528,35 +627,38 @@
     const groupSection = document.getElementById('groupSection');
     const membersList = document.getElementById('membersList');
     const successView = document.getElementById('successView');
+    const otpView = document.getElementById('otpView');
+    const editBanner = document.getElementById('editBanner');
 
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
 
+    // State
+    let editMode = false;
+    let editRegistrationId = null;
+    let otpEmail = null;
+
+    // Pre-fill from invite token
     if (token) {
       fetch(`/api/register/invite/${token}`)
         .then(r => r.json())
         .then(data => {
           if (data.invite) {
             const inv = data.invite;
-            // Try to split name into first/last
             const parts = (inv.name || '').trim().split(/\s+/);
-            const firstName = parts[0] || '';
-            const lastName = parts.slice(1).join(' ') || '';
-            const fnInput = form.querySelector('[name="contact_first_name"]');
-            const lnInput = form.querySelector('[name="contact_last_name"]');
-            const emailInput = form.querySelector('[name="contact_email"]');
-            if (fnInput && firstName) fnInput.value = firstName;
-            if (lnInput && lastName) lnInput.value = lastName;
-            if (emailInput && inv.email) emailInput.value = inv.email;
-            const companyRadio = form.querySelector(`[name="company"][value="${inv.company}"]`);
-            if (companyRadio) companyRadio.checked = true;
-            if (data.existingRegistration) {
-              showAlert('Hai gia inviato una candidatura. Per modifiche, contattaci via email.', 'error');
-              document.getElementById('submitBtn').disabled = true;
-            }
+            setField('contact_first_name', parts[0] || '');
+            setField('contact_last_name', parts.slice(1).join(' ') || '');
+            setField('contact_email', inv.email || '');
+            const radio = form.querySelector(`[name="company"][value="${inv.company}"]`);
+            if (radio) radio.checked = true;
           }
         })
         .catch(() => {});
+    }
+
+    function setField(name, value) {
+      const el = form.querySelector(`[name="${name}"]`);
+      if (el) el.value = value;
     }
 
     function toggleGroupFields() {
@@ -577,66 +679,207 @@
     }
 
     function removeMember(btn) {
-      if (membersList.children.length > 1) {
-        btn.closest('.member-row').remove();
+      if (membersList.children.length > 1) btn.closest('.member-row').remove();
+    }
+
+    function showAlert(html, type) {
+      alertEl.innerHTML = html;
+      alertEl.className = `alert alert-${type}`;
+      alertEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    function hideAlert() { alertEl.className = 'alert'; alertEl.innerHTML = ''; }
+
+    // ===== EMAIL CHECK (on blur) =====
+    const emailInput = form.querySelector('[name="contact_email"]');
+    let emailChecked = false;
+    let emailConflict = null;
+
+    emailInput.addEventListener('blur', async () => {
+      const email = emailInput.value.trim();
+      if (!email || !email.includes('@')) return;
+
+      try {
+        const res = await fetch('/api/register/check-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+        emailConflict = data.conflict;
+
+        if (data.conflict === 'candidate') {
+          showAlert(
+            `Hai gia inviato una candidatura. Puoi modificarla verificando la tua identita con un codice OTP.` +
+            `<div class="alert-actions">` +
+            `<button class="alert-btn alert-btn-primary" onclick="startOtpFlow()">Modifica candidatura</button>` +
+            `<button class="alert-btn alert-btn-secondary" onclick="hideAlert(); emailConflict=null;">Usa un'altra email</button>` +
+            `</div>`,
+            'warning'
+          );
+        } else if (data.conflict === 'member') {
+          showAlert(data.message + ` Se vuoi procedere con una candidatura autonoma, usa un'altra email.`, 'warning');
+        } else {
+          emailChecked = true;
+          if (alertEl.classList.contains('alert-warning')) hideAlert();
+        }
+      } catch (e) { /* silent */ }
+    });
+
+    // ===== OTP FLOW =====
+    async function startOtpFlow() {
+      otpEmail = emailInput.value.trim();
+      hideAlert();
+      await requestOtp();
+      form.classList.add('hidden');
+      editBanner.classList.add('hidden');
+      otpView.classList.remove('hidden');
+      document.getElementById('otpInput').focus();
+    }
+
+    async function requestOtp() {
+      try {
+        const res = await fetch('/api/register/request-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: otpEmail }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showAlert(data.error || 'Errore nell\'invio del codice', 'error');
+          return;
+        }
+        showAlert('Codice inviato alla tua email', 'success');
+      } catch (e) {
+        showAlert('Errore di connessione', 'error');
       }
     }
 
-    function showAlert(msg, type) {
-      alertEl.textContent = msg;
-      alertEl.className = `alert alert-${type}`;
-    }
-    function hideAlert() { alertEl.className = 'alert'; }
+    async function verifyOtp() {
+      const code = document.getElementById('otpInput').value.trim();
+      if (code.length !== 6) {
+        showAlert('Inserisci il codice a 6 cifre', 'error');
+        return;
+      }
 
+      try {
+        const res = await fetch('/api/register/verify-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: otpEmail, code }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showAlert(data.error || 'Codice non valido', 'error');
+          return;
+        }
+
+        // Success — populate form with existing data and enter edit mode
+        enterEditMode(data.registration);
+      } catch (e) {
+        showAlert('Errore di connessione', 'error');
+      }
+    }
+
+    function cancelOtp() {
+      otpView.classList.add('hidden');
+      form.classList.remove('hidden');
+      hideAlert();
+      emailConflict = null;
+      otpEmail = null;
+    }
+
+    function enterEditMode(reg) {
+      editMode = true;
+      editRegistrationId = reg.id;
+      emailConflict = null;
+
+      // Hide OTP, show form with edit banner
+      otpView.classList.add('hidden');
+      form.classList.remove('hidden');
+      editBanner.classList.remove('hidden');
+      hideAlert();
+
+      // Populate fields
+      const radio = form.querySelector(`[name="company"][value="${reg.company}"]`);
+      if (radio) radio.checked = true;
+
+      const typeRadio = form.querySelector(`[name="type"][value="${reg.type}"]`);
+      if (typeRadio) { typeRadio.checked = true; toggleGroupFields(); }
+
+      // Split name if first/last not available
+      const fn = reg.contact_first_name || (reg.contact_name || '').split(' ')[0] || '';
+      const ln = reg.contact_last_name || (reg.contact_name || '').split(' ').slice(1).join(' ') || '';
+      setField('contact_first_name', fn);
+      setField('contact_last_name', ln);
+      setField('contact_email', reg.contact_email);
+      setField('group_name', reg.group_name || '');
+      setField('song_1', reg.song_1);
+      setField('song_1_artist', reg.song_1_artist || '');
+      setField('song_2', reg.song_2);
+      setField('song_2_artist', reg.song_2_artist || '');
+
+      // Populate group members
+      if (reg.type === 'gruppo' && reg.members && reg.members.length > 0) {
+        membersList.innerHTML = '';
+        reg.members.forEach(m => {
+          const parts = (m.name || '').split(' ');
+          const row = document.createElement('div');
+          row.className = 'member-row';
+          row.innerHTML = `
+            <div><input type="text" placeholder="Nome" class="member-fname" value="${parts[0] || ''}"></div>
+            <div><input type="text" placeholder="Cognome" class="member-lname" value="${parts.slice(1).join(' ') || ''}"></div>
+            <div><input type="email" placeholder="Email (opz.)" class="member-email" value="${m.email || ''}"></div>
+            <button type="button" class="btn-remove-member" onclick="removeMember(this)">&times;</button>
+          `;
+          membersList.appendChild(row);
+        });
+      }
+
+      // Change button text
+      document.getElementById('submitBtn').textContent = 'Aggiorna candidatura';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ===== SUBMIT (new or update) =====
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       hideAlert();
 
       const submitBtn = document.getElementById('submitBtn');
+      const btnLabel = editMode ? 'Aggiorna candidatura' : 'Invia candidatura';
       submitBtn.disabled = true;
       submitBtn.textContent = 'Invio in corso...';
 
       const type = form.querySelector('[name="type"]:checked')?.value;
       const company = form.querySelector('[name="company"]:checked')?.value;
 
-      if (!company) {
-        showAlert('Seleziona la tua societa', 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Invia candidatura';
-        return;
-      }
-      if (!type) {
-        showAlert('Seleziona la modalita di partecipazione', 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Invia candidatura';
-        return;
+      if (!company) { showAlert('Seleziona la tua societa', 'error'); submitBtn.disabled = false; submitBtn.textContent = btnLabel; return; }
+      if (!type) { showAlert('Seleziona la modalita di partecipazione', 'error'); submitBtn.disabled = false; submitBtn.textContent = btnLabel; return; }
+
+      // Check for unresolved email conflict (only for new registrations)
+      if (!editMode && emailConflict === 'candidate') {
+        showAlert('Devi prima risolvere il conflitto email. Modifica la candidatura esistente o usa un\'altra email.', 'error');
+        submitBtn.disabled = false; submitBtn.textContent = btnLabel; return;
       }
 
       let members = [];
       if (type === 'gruppo') {
-        const rows = membersList.querySelectorAll('.member-row');
-        rows.forEach(row => {
+        membersList.querySelectorAll('.member-row').forEach(row => {
           const fname = row.querySelector('.member-fname').value.trim();
           const lname = row.querySelector('.member-lname').value.trim();
           const email = row.querySelector('.member-email').value.trim();
           const fullName = [fname, lname].filter(Boolean).join(' ');
           if (fullName) members.push({ name: fullName, first_name: fname, last_name: lname, email: email || null });
         });
-        if (members.length === 0) {
-          showAlert('Aggiungi almeno un membro al gruppo', 'error');
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Invia candidatura';
-          return;
-        }
+        if (members.length === 0) { showAlert('Aggiungi almeno un membro al gruppo', 'error'); submitBtn.disabled = false; submitBtn.textContent = btnLabel; return; }
       }
 
       const firstName = form.querySelector('[name="contact_first_name"]').value.trim();
       const lastName = form.querySelector('[name="contact_last_name"]').value.trim();
 
       const payload = {
-        token: token || null,
-        company,
-        type,
+        company, type,
         group_name: form.querySelector('[name="group_name"]')?.value || null,
         contact_first_name: firstName,
         contact_last_name: lastName,
@@ -649,30 +892,47 @@
         members,
       };
 
+      let url, method;
+      if (editMode) {
+        url = `/api/register/${editRegistrationId}`;
+        method = 'PUT';
+        payload.otp_email = otpEmail;
+      } else {
+        url = '/api/register';
+        method = 'POST';
+        payload.token = token || null;
+      }
+
       try {
-        const res = await fetch('/api/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const data = await res.json();
 
         if (!res.ok) {
-          showAlert(data.error || 'Errore durante la registrazione', 'error');
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Invia candidatura';
-          return;
+          showAlert(data.error || 'Errore durante l\'invio', 'error');
+          submitBtn.disabled = false; submitBtn.textContent = btnLabel; return;
         }
 
         form.classList.add('hidden');
+        editBanner.classList.add('hidden');
         successView.classList.remove('hidden');
+
+        if (editMode) {
+          successView.querySelector('h2').textContent = 'Candidatura aggiornata';
+          successView.querySelector('p').textContent = 'Le modifiche sono state salvate. La candidatura sara rivalutata.';
+        }
+
         hideAlert();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } catch (err) {
         showAlert('Errore di connessione. Riprova.', 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Invia candidatura';
+        submitBtn.disabled = false; submitBtn.textContent = btnLabel;
       }
+    });
+
+    // Auto-submit OTP on 6 digits
+    document.getElementById('otpInput').addEventListener('input', function() {
+      this.value = this.value.replace(/[^0-9]/g, '');
+      if (this.value.length === 6) verifyOtp();
     });
   </script>
 </body>
