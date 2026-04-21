@@ -81,12 +81,15 @@
     .hero-teams {
       display: inline-flex;
       align-items: center;
-      gap: 16px;
-      margin: 20px 0 24px;
-      font-size: 15px;
-      font-weight: 500;
+      gap: 20px;
+      margin: 24px 0 28px;
     }
-    .hero-teams .team-name { color: var(--text); }
+    .hero-teams .team-logo {
+      height: 28px;
+      width: auto;
+      object-fit: contain;
+      opacity: 0.9;
+    }
     .hero-teams .vs {
       font-family: 'Playfair Display', serif;
       font-style: italic;
@@ -209,6 +212,13 @@
       color: var(--text);
     }
     .toggle-card .label-icon { font-size: 18px; line-height: 1; }
+    .toggle-card .company-logo {
+      height: 20px;
+      width: auto;
+      object-fit: contain;
+      opacity: 0.85;
+    }
+    .toggle-option input:checked + .toggle-card .company-logo { opacity: 1; }
 
     /* ===== GROUP MEMBERS ===== */
     .members-list { display: flex; flex-direction: column; gap: 10px; }
@@ -375,9 +385,9 @@
     <div class="hero-eyebrow">Save the date &mdash; 7 Maggio 2026</div>
     <h1>Sfida <em>Karaoke</em></h1>
     <div class="hero-teams">
-      <span class="team-name">Our Films</span>
+      <img src="/img/ourfilms.png" alt="Our Films" class="team-logo">
       <span class="vs">vs</span>
-      <span class="team-name">Frame by Frame</span>
+      <img src="/img/framebyframe.png" alt="Frame by Frame" class="team-logo">
     </div>
     <div class="hero-details">
       <span>Giovedi 7 Maggio</span>
@@ -400,13 +410,13 @@
           <label class="toggle-option">
             <input type="radio" name="company" value="ourfilms" required>
             <div class="toggle-card">
-              <span class="label-text">Our Films</span>
+              <img src="/img/ourfilms.png" alt="Our Films" class="company-logo">
             </div>
           </label>
           <label class="toggle-option">
             <input type="radio" name="company" value="framebyframe" required>
             <div class="toggle-card">
-              <span class="label-text">Frame by Frame</span>
+              <img src="/img/framebyframe.png" alt="Frame by Frame" class="company-logo">
             </div>
           </label>
         </div>
