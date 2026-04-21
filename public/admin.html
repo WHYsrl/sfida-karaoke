@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Sfida Karaoke</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold: #daa520; --gold-dark: #b8860b; --gold-light: #f0d060;
+      --bg: #0a0a0a; --bg-card: #111; --bg-input: #1a1a1a;
+      --text: #f0f0f0; --text-muted: #888; --border: #2a2a2a;
+      --error: #ef4444; --success: #22c55e; --warning: #f59e0b; --info: #3b82f6;
+    }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* LOGIN */
+    .login-overlay {
+      position: fixed; inset: 0; background: var(--bg); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-box {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 40px; width: 360px; max-width: 90vw; text-align: center;
+    }
+    .login-box h2 { color: var(--gold); margin-bottom: 8px; }
+    .login-box p { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+    .login-box input {
+      width: 100%; padding: 12px 14px; background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-family: inherit; font-size: 15px; outline: none;
+      margin-bottom: 16px;
+    }
+    .login-box input:focus { border-color: var(--gold); }
+    .login-box button {
+      width: 100%; padding: 12px; background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+      color: var(--bg); border: none; border-radius: 8px; font-family: inherit;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+    }
+    .login-error { color: var(--error); font-size: 13px; margin-top: 8px; display: none; }
+
+    /* HEADER */
+    header {
+      background: var(--bg-card); border-bottom: 1px solid var(--border);
+      padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
+    }
+    header h1 { font-size: 20px; color: var(--gold); }
+    header .nav { display: flex; gap: 4px; }
+    header .nav button {
+      padding: 8px 16px; background: transparent; border: 1px solid var(--border);
+      color: var(--text-muted); border-radius: 6px; cursor: pointer;
+      font-family: inherit; font-size: 13px; transition: all 0.2s;
+    }
+    header .nav button.active, header .nav button:hover {
+      border-color: var(--gold); color: var(--gold); background: rgba(218,165,32,0.08);
+    }
+
+    /* LAYOUT */
+    .dashboard { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+    /* STATS GRID */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .stat-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px;
+    }
+    .stat-card .label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-card .value { font-size: 28px; font-weight: 700; color: var(--gold); margin-top: 4px; }
+    .stat-card .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* FUNNEL BAR */
+    .funnel-section { margin-bottom: 24px; }
+    .funnel-bar {
+      display: flex; height: 32px; border-radius: 8px; overflow: hidden;
+      background: var(--bg-card); border: 1px solid var(--border);
+    }
+    .funnel-bar .segment {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600; color: var(--bg); transition: width 0.5s;
+      min-width: 0;
+    }
+    .funnel-bar .segment span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
+    .funnel-legend { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
+    .funnel-legend .item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+    .funnel-legend .dot { width: 10px; height: 10px; border-radius: 3px; }
+
+    /* TABLE */
+    .table-section { margin-bottom: 24px; }
+    .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+    .table-header h2 { font-size: 16px; color: var(--gold); }
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+    .filters select, .filters input {
+      padding: 6px 10px; background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-family: inherit; font-size: 13px; outline: none;
+    }
+    .filters select:focus, .filters input:focus { border-color: var(--gold); }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+    th { color: var(--text-muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; position: sticky; top: 0; background: var(--bg-card); }
+    tr:hover td { background: rgba(218,165,32,0.03); }
+
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+    }
+    .badge-ourfilms { background: rgba(59,130,246,0.15); color: #93c5fd; }
+    .badge-framebyframe { background: rgba(168,85,247,0.15); color: #c4b5fd; }
+    .badge-solista { background: rgba(34,197,94,0.15); color: #86efac; }
+    .badge-gruppo { background: rgba(245,158,11,0.15); color: #fcd34d; }
+    .badge-pending { background: rgba(255,255,255,0.08); color: #999; }
+    .badge-accepted { background: rgba(34,197,94,0.15); color: #86efac; }
+    .badge-revision { background: rgba(245,158,11,0.15); color: #fcd34d; }
+    .badge-rejected { background: rgba(239,68,68,0.15); color: #fca5a5; }
+
+    .action-btns { display: flex; gap: 4px; }
+    .action-btn {
+      padding: 4px 10px; border: 1px solid var(--border); background: transparent;
+      color: var(--text-muted); border-radius: 4px; cursor: pointer; font-size: 12px;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .action-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .action-btn.accept:hover { border-color: var(--success); color: var(--success); }
+    .action-btn.reject:hover { border-color: var(--error); color: var(--error); }
+    .action-btn.revise:hover { border-color: var(--warning); color: var(--warning); }
+
+    /* DUPLICATE ALERT */
+    .duplicate-alert {
+      background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 10px; padding: 16px; margin-bottom: 24px;
+    }
+    .duplicate-alert h3 { color: var(--warning); font-size: 14px; margin-bottom: 10px; }
+    .dup-item { padding: 8px 0; border-bottom: 1px solid rgba(245,158,11,0.15); }
+    .dup-item:last-child { border-bottom: none; }
+    .dup-song { color: var(--gold); font-weight: 600; }
+    .dup-who { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 24px; width: 480px; max-width: 100%; max-height: 80vh; overflow-y: auto;
+    }
+    .modal h3 { color: var(--gold); margin-bottom: 16px; }
+    .modal textarea {
+      width: 100%; padding: 12px; background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-family: inherit; font-size: 14px;
+      resize: vertical; min-height: 80px; outline: none;
+    }
+    .modal textarea:focus { border-color: var(--gold); }
+    .modal .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+    .modal .btn {
+      padding: 10px 20px; border: none; border-radius: 8px; font-family: inherit;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .modal .btn-cancel { background: var(--bg-input); color: var(--text-muted); }
+    .modal .btn-confirm { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); color: var(--bg); }
+
+    /* SEND INVITES */
+    .invite-form textarea {
+      width: 100%; padding: 12px; background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-family: monospace; font-size: 13px;
+      resize: vertical; min-height: 120px; outline: none;
+    }
+    .invite-form textarea:focus { border-color: var(--gold); }
+    .invite-form .hint { font-size: 12px; color: var(--text-muted); margin: 8px 0 16px; }
+    .invite-form button {
+      padding: 10px 24px; background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+      color: var(--bg); border: none; border-radius: 8px; font-family: inherit;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .invite-results { margin-top: 16px; font-size: 13px; }
+    .invite-results .ok { color: var(--success); }
+    .invite-results .err { color: var(--error); }
+
+    /* TABS SECTIONS */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* EMAIL TRACKING TABLE */
+    .scroll-x { overflow-x: auto; }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      header { flex-direction: column; gap: 12px; }
+      header .nav { overflow-x: auto; width: 100%; }
+      .dashboard { padding: 16px; }
+      .table-header { flex-direction: column; align-items: flex-start; }
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h2>🎤 Admin</h2>
+    <p>Sfida Karaoke — Backoffice</p>
+    <input type="password" id="passwordInput" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">Accedi</button>
+    <div class="login-error" id="loginError">Password non corretta</div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header id="mainHeader" class="hidden">
+  <h1>🎤 Sfida Karaoke — Admin</h1>
+  <div class="nav">
+    <button class="active" onclick="showTab('dashboard', this)">Dashboard</button>
+    <button onclick="showTab('registrations', this)">Iscrizioni</button>
+    <button onclick="showTab('songs', this)">Canzoni</button>
+    <button onclick="showTab('email-tracking', this)">Email</button>
+    <button onclick="showTab('send-invites', this)">Invita</button>
+  </div>
+</header>
+
+<div class="dashboard hidden" id="mainDashboard">
+
+  <!-- ===== TAB: DASHBOARD ===== -->
+  <div class="tab-content active" id="tab-dashboard">
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid"></div>
+
+    <!-- Funnel -->
+    <div class="funnel-section">
+      <h3 style="color: var(--gold); font-size: 14px; margin-bottom: 8px;">📊 Funnel Email → Registrazione</h3>
+      <div class="funnel-bar" id="funnelBar"></div>
+      <div class="funnel-legend" id="funnelLegend"></div>
+    </div>
+
+    <!-- Company battle -->
+    <div class="stats-grid" id="battleGrid" style="grid-template-columns: 1fr 1fr;"></div>
+
+    <!-- Duplicates -->
+    <div id="duplicatesSection"></div>
+  </div>
+
+  <!-- ===== TAB: REGISTRATIONS ===== -->
+  <div class="tab-content" id="tab-registrations">
+    <div class="table-header">
+      <h2>📋 Iscrizioni</h2>
+      <div class="filters">
+        <select id="filterCompany" onchange="loadRegistrations()">
+          <option value="">Tutte le società</option>
+          <option value="ourfilms">Our Films</option>
+          <option value="framebyframe">Frame by Frame</option>
+        </select>
+        <select id="filterStatus" onchange="loadRegistrations()">
+          <option value="">Tutti gli stati</option>
+          <option value="pending">In attesa</option>
+          <option value="accepted">Accettate</option>
+          <option value="revision">Revisione</option>
+          <option value="rejected">Rifiutate</option>
+        </select>
+        <select id="filterType" onchange="loadRegistrations()">
+          <option value="">Solisti + Gruppi</option>
+          <option value="solista">Solo Solisti</option>
+          <option value="gruppo">Solo Gruppi</option>
+        </select>
+      </div>
+    </div>
+    <div class="scroll-x">
+      <table>
+        <thead>
+          <tr>
+            <th>Società</th><th>Tipo</th><th>Nome / Gruppo</th><th>Email</th>
+            <th>Canzone 1</th><th>Canzone 2</th><th>Membri</th><th>Stato</th><th>Azioni</th>
+          </tr>
+        </thead>
+        <tbody id="regTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== TAB: SONGS ===== -->
+  <div class="tab-content" id="tab-songs">
+    <div class="table-header">
+      <h2>🎵 Elenco Canzoni</h2>
+    </div>
+    <div class="scroll-x">
+      <table>
+        <thead><tr><th>Canzone</th><th>Artista</th><th>Cantata da</th><th>Società</th><th>Tipo</th><th>#</th></tr></thead>
+        <tbody id="songsTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== TAB: EMAIL TRACKING ===== -->
+  <div class="tab-content" id="tab-email-tracking">
+    <div class="table-header">
+      <h2>📧 Tracking Email</h2>
+    </div>
+    <div class="scroll-x">
+      <table>
+        <thead><tr><th>Nome</th><th>Email</th><th>Società</th><th>Inviata</th><th>Aperta</th><th>Click</th><th>Registrato</th></tr></thead>
+        <tbody id="emailTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== TAB: SEND INVITES ===== -->
+  <div class="tab-content" id="tab-send-invites">
+    <div class="card">
+      <div class="card-title">📨 Invia Inviti</div>
+      <div class="invite-form">
+        <label style="color: var(--text-muted); font-size: 13px; margin-bottom: 8px; display: block;">
+          Inserisci i destinatari (uno per riga): <strong>nome, email, società</strong>
+        </label>
+        <textarea id="inviteList" placeholder="Mario Rossi, mario@ourfilms.it, ourfilms
+Laura Bianchi, laura@framebyframe.it, framebyframe
+..."></textarea>
+        <div class="hint">Formato: Nome Cognome, email@example.com, ourfilms|framebyframe</div>
+        <button onclick="sendInvites()">📨 Invia Inviti</button>
+        <div class="invite-results" id="inviteResults"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS MODAL -->
+<div class="modal-overlay hidden" id="statusModal">
+  <div class="modal">
+    <h3 id="modalTitle">Aggiorna Stato</h3>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;" id="modalSubtitle"></p>
+    <label style="color: var(--text-muted); font-size: 13px;">Messaggio (opzionale):</label>
+    <textarea id="modalMessage" placeholder="Aggiungi un messaggio per il partecipante..."></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal()">Annulla</button>
+      <button class="btn btn-confirm" id="modalConfirm">Conferma</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let adminPassword = '';
+
+  // ===== AUTH =====
+  function doLogin() {
+    adminPassword = document.getElementById('passwordInput').value;
+    fetch('/api/admin/stats', { headers: { 'X-Admin-Password': adminPassword } })
+      .then(r => {
+        if (!r.ok) throw new Error('unauthorized');
+        return r.json();
+      })
+      .then(() => {
+        document.getElementById('loginOverlay').classList.add('hidden');
+        document.getElementById('mainHeader').classList.remove('hidden');
+        document.getElementById('mainDashboard').classList.remove('hidden');
+        loadDashboard();
+      })
+      .catch(() => {
+        document.getElementById('loginError').style.display = 'block';
+      });
+  }
+
+  function api(path) {
+    return fetch(`/api/admin${path}`, { headers: { 'X-Admin-Password': adminPassword } }).then(r => r.json());
+  }
+
+  // ===== TABS =====
+  function showTab(tab, btn) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    if (btn) btn.classList.add('active');
+    if (tab === 'dashboard') loadDashboard();
+    if (tab === 'registrations') loadRegistrations();
+    if (tab === 'songs') loadSongs();
+    if (tab === 'email-tracking') loadEmailTracking();
+  }
+
+  // ===== DASHBOARD =====
+  async function loadDashboard() {
+    const stats = await api('/stats');
+    const e = stats.email;
+    const r = stats.registrations;
+
+    document.getElementById('statsGrid').innerHTML = `
+      ${statCard('Email Inviate', e.total_sent, `OF: ${e.sent_ourfilms} | FBF: ${e.sent_framebyframe}`)}
+      ${statCard('Tasso Apertura', e.total_sent > 0 ? Math.round(e.total_opened / e.total_sent * 100) + '%' : '—', `${e.total_opened} aperte su ${e.total_sent}`)}
+      ${statCard('Tasso Click', e.total_sent > 0 ? Math.round(e.total_clicked / e.total_sent * 100) + '%' : '—', `${e.total_clicked} click su ${e.total_sent}`)}
+      ${statCard('Iscrizioni', r.total_registrations, `${r.total_solisti} solisti + ${r.total_gruppi} gruppi`)}
+      ${statCard('Partecipanti', stats.totalParticipants, `Media gruppo: ${stats.avgGroupSize}`)}
+      ${statCard('In Attesa', r.status_pending, 'da valutare')}
+      ${statCard('Accettate', r.status_accepted, '')}
+      ${statCard('Rifiutate / Rev.', parseInt(r.status_rejected) + parseInt(r.status_revision), `${r.status_rejected} rifiutate, ${r.status_revision} revisione`)}
+    `;
+
+    // Funnel
+    const total = parseInt(e.total_sent) || 1;
+    const opened = parseInt(e.total_opened);
+    const clicked = parseInt(e.total_clicked);
+    const registered = parseInt(r.total_registrations);
+    const funnelData = [
+      { label: `Inviate (${total})`, value: total, color: '#3b82f6' },
+      { label: `Aperte (${opened})`, value: opened, color: '#8b5cf6' },
+      { label: `Click (${clicked})`, value: clicked, color: '#f59e0b' },
+      { label: `Iscritti (${registered})`, value: registered, color: '#22c55e' },
+    ];
+    document.getElementById('funnelBar').innerHTML = funnelData.map(d =>
+      `<div class="segment" style="width: ${Math.max(d.value / total * 100, d.value > 0 ? 8 : 0)}%; background: ${d.color};"><span>${d.value > 0 ? d.label : ''}</span></div>`
+    ).join('');
+    document.getElementById('funnelLegend').innerHTML = funnelData.map(d =>
+      `<div class="item"><div class="dot" style="background:${d.color}"></div>${d.label}</div>`
+    ).join('');
+
+    // Battle
+    document.getElementById('battleGrid').innerHTML = `
+      <div class="stat-card" style="border-color: rgba(59,130,246,0.3);">
+        <div class="label">🎬 Our Films</div>
+        <div class="value" style="color: #93c5fd;">${r.reg_ourfilms}</div>
+        <div class="sub">${r.solisti_ourfilms} solisti · ${r.gruppi_ourfilms} gruppi</div>
+      </div>
+      <div class="stat-card" style="border-color: rgba(168,85,247,0.3);">
+        <div class="label">🎞️ Frame by Frame</div>
+        <div class="value" style="color: #c4b5fd;">${r.reg_framebyframe}</div>
+        <div class="sub">${r.solisti_framebyframe} solisti · ${r.gruppi_framebyframe} gruppi</div>
+      </div>
+    `;
+
+    // Duplicates
+    const dups = await api('/duplicate-songs');
+    if (dups.length > 0) {
+      document.getElementById('duplicatesSection').innerHTML = `
+        <div class="duplicate-alert">
+          <h3>⚠️ Canzoni Duplicate (${dups.length})</h3>
+          ${dups.map(d => `
+            <div class="dup-item">
+              <div class="dup-song">"${d.song}" ${d.artist ? `— ${d.artist}` : ''} <span style="color:var(--warning);font-size:12px;">(scelta da ${d.count} partecipanti)</span></div>
+              ${d.participants.map(p => `<div class="dup-who">→ ${p.type === 'gruppo' ? `Gruppo "${p.group_name}"` : p.contact_name} (${p.company === 'ourfilms' ? 'Our Films' : 'FBF'}) — canzone #${p.song_num}</div>`).join('')}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else {
+      document.getElementById('duplicatesSection').innerHTML = '';
+    }
+  }
+
+  function statCard(label, value, sub) {
+    return `<div class="stat-card"><div class="label">${label}</div><div class="value">${value}</div><div class="sub">${sub}</div></div>`;
+  }
+
+  // ===== REGISTRATIONS =====
+  async function loadRegistrations() {
+    const company = document.getElementById('filterCompany').value;
+    const status = document.getElementById('filterStatus').value;
+    const type = document.getElementById('filterType').value;
+    const params = new URLSearchParams();
+    if (company) params.set('company', company);
+    if (status) params.set('status', status);
+    if (type) params.set('type', type);
+
+    const regs = await api(`/registrations?${params}`);
+    document.getElementById('regTableBody').innerHTML = regs.map(r => `
+      <tr>
+        <td><span class="badge badge-${r.company}">${r.company === 'ourfilms' ? 'Our Films' : 'FBF'}</span></td>
+        <td><span class="badge badge-${r.type}">${r.type}</span></td>
+        <td><strong>${r.type === 'gruppo' ? r.group_name : r.contact_name}</strong>${r.type === 'gruppo' ? `<br><small style="color:var(--text-muted)">Ref: ${r.contact_name}</small>` : ''}</td>
+        <td style="font-size:12px;">${r.contact_email}</td>
+        <td style="font-size:12px;">🎵 ${r.song_1}${r.song_1_artist ? ` <span style="color:var(--text-muted)">— ${r.song_1_artist}</span>` : ''}</td>
+        <td style="font-size:12px;">🎵 ${r.song_2}${r.song_2_artist ? ` <span style="color:var(--text-muted)">— ${r.song_2_artist}</span>` : ''}</td>
+        <td>${r.type === 'gruppo' ? r.members.map(m => m.name).join(', ') || '—' : '—'}</td>
+        <td><span class="badge badge-${r.status}">${statusLabel(r.status)}</span></td>
+        <td>
+          <div class="action-btns">
+            ${r.status !== 'accepted' ? `<button class="action-btn accept" onclick="openStatusModal(${r.id},'accepted','${esc(r.contact_name)}')">✅</button>` : ''}
+            ${r.status !== 'revision' ? `<button class="action-btn revise" onclick="openStatusModal(${r.id},'revision','${esc(r.contact_name)}')">📝</button>` : ''}
+            ${r.status !== 'rejected' ? `<button class="action-btn reject" onclick="openStatusModal(${r.id},'rejected','${esc(r.contact_name)}')">❌</button>` : ''}
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function statusLabel(s) { return { pending: 'In attesa', accepted: 'Accettata', revision: 'Revisione', rejected: 'Rifiutata' }[s] || s; }
+  function esc(s) { return (s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+  // ===== STATUS MODAL =====
+  let modalRegId = null, modalStatus = null;
+
+  function openStatusModal(id, status, name) {
+    modalRegId = id;
+    modalStatus = status;
+    const labels = { accepted: '✅ Accetta iscrizione', revision: '📝 Richiedi revisione', rejected: '❌ Rifiuta iscrizione' };
+    document.getElementById('modalTitle').textContent = labels[status];
+    document.getElementById('modalSubtitle').textContent = `Partecipante: ${name}`;
+    document.getElementById('modalMessage').value = '';
+    document.getElementById('statusModal').classList.remove('hidden');
+  }
+
+  function closeModal() { document.getElementById('statusModal').classList.add('hidden'); }
+
+  document.getElementById('modalConfirm').addEventListener('click', async () => {
+    const message = document.getElementById('modalMessage').value;
+    const res = await fetch(`/api/admin/registrations/${modalRegId}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+      body: JSON.stringify({ status: modalStatus, message }),
+    });
+    if (res.ok) {
+      closeModal();
+      loadRegistrations();
+      loadDashboard();
+    } else {
+      alert('Errore nell\'aggiornamento');
+    }
+  });
+
+  // ===== SONGS =====
+  async function loadSongs() {
+    const songs = await api('/songs');
+    const rows = [];
+    songs.forEach(s => {
+      const who = s.type === 'gruppo' ? s.group_name : s.contact_name;
+      rows.push({ song: s.song_1, artist: s.song_1_artist, who, company: s.company, type: s.type, num: 1 });
+      rows.push({ song: s.song_2, artist: s.song_2_artist, who, company: s.company, type: s.type, num: 2 });
+    });
+    rows.sort((a, b) => a.song.localeCompare(b.song));
+    document.getElementById('songsTableBody').innerHTML = rows.map(r => `
+      <tr>
+        <td><strong>${r.song}</strong></td>
+        <td style="color:var(--text-muted)">${r.artist || '—'}</td>
+        <td>${r.who}</td>
+        <td><span class="badge badge-${r.company}">${r.company === 'ourfilms' ? 'Our Films' : 'FBF'}</span></td>
+        <td><span class="badge badge-${r.type}">${r.type}</span></td>
+        <td style="color:var(--text-muted)">#${r.num}</td>
+      </tr>
+    `).join('');
+  }
+
+  // ===== EMAIL TRACKING =====
+  async function loadEmailTracking() {
+    const emails = await api('/email-tracking');
+    document.getElementById('emailTableBody').innerHTML = emails.map(e => `
+      <tr>
+        <td>${e.name}</td>
+        <td style="font-size:12px;">${e.email}</td>
+        <td><span class="badge badge-${e.company}">${e.company === 'ourfilms' ? 'Our Films' : 'FBF'}</span></td>
+        <td style="font-size:12px;">${new Date(e.sent_at).toLocaleString('it-IT')}</td>
+        <td>${e.opened_at ? `✅ ${e.open_count}x` : '—'}</td>
+        <td>${e.clicked_at ? `✅ ${e.click_count}x` : '—'}</td>
+        <td>${e.has_registered ? '<span class="badge badge-accepted">Sì</span>' : '<span class="badge badge-pending">No</span>'}</td>
+      </tr>
+    `).join('');
+  }
+
+  // ===== SEND INVITES =====
+  async function sendInvites() {
+    const text = document.getElementById('inviteList').value.trim();
+    if (!text) return;
+
+    const lines = text.split('\n').filter(l => l.trim());
+    const recipients = [];
+    const errors = [];
+
+    lines.forEach((line, i) => {
+      const parts = line.split(',').map(s => s.trim());
+      if (parts.length < 3) { errors.push(`Riga ${i + 1}: formato non valido`); return; }
+      const [name, email, company] = parts;
+      if (!['ourfilms', 'framebyframe'].includes(company)) { errors.push(`Riga ${i + 1}: società "${company}" non valida`); return; }
+      if (!email.includes('@')) { errors.push(`Riga ${i + 1}: email non valida`); return; }
+      recipients.push({ name, email, company });
+    });
+
+    if (errors.length > 0) {
+      document.getElementById('inviteResults').innerHTML = errors.map(e => `<div class="err">❌ ${e}</div>`).join('');
+      return;
+    }
+
+    document.getElementById('inviteResults').innerHTML = '<div style="color:var(--gold);">Invio in corso...</div>';
+
+    const res = await fetch('/api/admin/send-invites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+      body: JSON.stringify({ recipients }),
+    });
+    const data = await res.json();
+
+    document.getElementById('inviteResults').innerHTML = `
+      <div class="ok">✅ ${data.sent} email inviate con successo</div>
+      ${data.errors > 0 ? `<div class="err">❌ ${data.errors} errori</div>` : ''}
+      ${data.details?.filter(d => d.status === 'error').map(d => `<div class="err">→ ${d.email}: ${d.error}</div>`).join('') || ''}
+    `;
+  }
+</script>
+</body>
+</html>

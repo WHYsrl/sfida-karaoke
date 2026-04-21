@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sfida Karaoke — Our Films vs Frame by Frame</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #daa520;
+      --gold-dark: #b8860b;
+      --gold-light: #f0d060;
+      --bg: #0a0a0a;
+      --bg-card: #111111;
+      --bg-input: #1a1a1a;
+      --text: #f0f0f0;
+      --text-muted: #888;
+      --border: #2a2a2a;
+      --error: #ef4444;
+      --success: #22c55e;
+    }
+
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      background: linear-gradient(180deg, #1a1400 0%, var(--bg) 100%);
+      text-align: center;
+      padding: 40px 20px 30px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at center, rgba(218,165,32,0.08) 0%, transparent 70%);
+      animation: pulse 4s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+    .hero h1 {
+      font-size: clamp(28px, 6vw, 42px);
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      position: relative;
+    }
+    .hero .subtitle {
+      font-size: clamp(14px, 3vw, 18px);
+      color: var(--text-muted);
+      margin-top: 6px;
+      position: relative;
+    }
+    .hero .vs-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 0;
+      font-size: clamp(14px, 3vw, 16px);
+      font-weight: 600;
+      position: relative;
+    }
+    .vs-badge .company { color: var(--gold); }
+    .vs-badge .vs {
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+      color: var(--bg);
+      padding: 2px 10px;
+      border-radius: 4px;
+      font-weight: 800;
+      font-size: 13px;
+    }
+    .event-info {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px 24px;
+      margin-top: 12px;
+      font-size: 14px;
+      color: var(--text-muted);
+      position: relative;
+    }
+    .event-info span { display: flex; align-items: center; gap: 6px; }
+
+    /* ===== FORM CONTAINER ===== */
+    .container {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--gold);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ===== FORM ELEMENTS ===== */
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    label .required { color: var(--gold); }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 15px;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--gold);
+    }
+    input::placeholder, textarea::placeholder { color: #555; }
+    select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6.5 6.5-6.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    select option { background: var(--bg-input); color: var(--text); }
+
+    .form-row { margin-bottom: 14px; }
+    .form-row-inline { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+    @media (max-width: 480px) { .form-row-inline { grid-template-columns: 1fr; } }
+
+    /* ===== COMPANY SELECTOR ===== */
+    .company-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    .company-option {
+      position: relative;
+      cursor: pointer;
+    }
+    .company-option input { display: none; }
+    .company-option .company-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 12px;
+      background: var(--bg-input);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .company-option input:checked + .company-label {
+      border-color: var(--gold);
+      background: rgba(218,165,32,0.08);
+    }
+    .company-option .company-label:hover { border-color: var(--gold-dark); }
+    .company-option .company-name { font-weight: 600; font-size: 15px; }
+
+    /* ===== TYPE SELECTOR ===== */
+    .type-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .type-option { position: relative; cursor: pointer; }
+    .type-option input { display: none; }
+    .type-option .type-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px;
+      background: var(--bg-input);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    .type-option input:checked + .type-label {
+      border-color: var(--gold);
+      background: rgba(218,165,32,0.08);
+    }
+    .type-option .type-label:hover { border-color: var(--gold-dark); }
+
+    /* ===== GROUP MEMBERS ===== */
+    .members-list { display: flex; flex-direction: column; gap: 10px; }
+    .member-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 36px;
+      gap: 8px;
+      align-items: center;
+    }
+    @media (max-width: 480px) { .member-row { grid-template-columns: 1fr 36px; } .member-row input:nth-child(2) { grid-column: 1; } .member-row button { grid-column: 2; grid-row: 1 / span 2; align-self: center; } }
+
+    .btn-remove {
+      width: 36px;
+      height: 36px;
+      border: 1px solid #333;
+      background: transparent;
+      color: #666;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .btn-remove:hover { border-color: var(--error); color: var(--error); }
+
+    .btn-add-member {
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--text-muted);
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      transition: all 0.2s;
+      margin-top: 6px;
+      width: 100%;
+    }
+    .btn-add-member:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ===== SONG INPUTS ===== */
+    .song-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    @media (max-width: 480px) { .song-row { grid-template-columns: 1fr; } }
+
+    /* ===== SUBMIT ===== */
+    .btn-submit {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+      color: var(--bg);
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(218,165,32,0.3); }
+    .btn-submit:active { transform: translateY(0); }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* ===== MESSAGES ===== */
+    .alert {
+      padding: 14px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .alert-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; display: block; }
+    .alert-success { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #86efac; display: block; }
+
+    /* ===== SUCCESS VIEW ===== */
+    .success-view {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .success-view .checkmark {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(34,197,94,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 40px;
+    }
+    .success-view h2 { color: var(--gold); margin-bottom: 12px; }
+    .success-view p { color: var(--text-muted); }
+
+    .hidden { display: none !important; }
+
+    /* ===== FOOTER ===== */
+    footer {
+      text-align: center;
+      padding: 30px 20px;
+      color: #444;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>🎤 SFIDA KARAOKE</h1>
+    <div class="vs-badge">
+      <span class="company">Our Films</span>
+      <span class="vs">VS</span>
+      <span class="company">Frame by Frame</span>
+    </div>
+    <div class="event-info">
+      <span>📅 7 Maggio 2026</span>
+      <span>🕗 20:00 — 24:00</span>
+      <span>📍 Jackie'O, Via Boncompagni 11, Roma</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- ALERT -->
+    <div id="alert" class="alert"></div>
+
+    <!-- FORM VIEW -->
+    <form id="registrationForm">
+
+      <!-- Company -->
+      <div class="card">
+        <div class="card-title">🏢 La tua società</div>
+        <div class="company-selector">
+          <label class="company-option">
+            <input type="radio" name="company" value="ourfilms" required>
+            <div class="company-label">
+              <span style="font-size: 24px;">🎬</span>
+              <span class="company-name">Our Films</span>
+            </div>
+          </label>
+          <label class="company-option">
+            <input type="radio" name="company" value="framebyframe" required>
+            <div class="company-label">
+              <span style="font-size: 24px;">🎞️</span>
+              <span class="company-name">Frame by Frame</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Type -->
+      <div class="card">
+        <div class="card-title">🎙️ Come partecipi?</div>
+        <div class="type-selector">
+          <label class="type-option">
+            <input type="radio" name="type" value="solista" required onchange="toggleGroupFields()">
+            <div class="type-label">🙋 Solista</div>
+          </label>
+          <label class="type-option">
+            <input type="radio" name="type" value="gruppo" required onchange="toggleGroupFields()">
+            <div class="type-label">👥 Gruppo</div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Contact Info -->
+      <div class="card">
+        <div class="card-title">👤 I tuoi dati</div>
+        <div class="form-row-inline">
+          <div>
+            <label>Nome e Cognome <span class="required">*</span></label>
+            <input type="text" name="contact_name" required placeholder="Mario Rossi">
+          </div>
+          <div>
+            <label>Email <span class="required">*</span></label>
+            <input type="email" name="contact_email" required placeholder="mario@example.com">
+          </div>
+        </div>
+      </div>
+
+      <!-- Group Section -->
+      <div class="card hidden" id="groupSection">
+        <div class="card-title">👥 Il tuo gruppo</div>
+        <div class="form-row">
+          <label>Nome del gruppo <span class="required">*</span></label>
+          <input type="text" name="group_name" placeholder="Es: I Microfoni d'Oro">
+        </div>
+        <label style="margin-top: 12px;">Membri del gruppo (oltre a te)</label>
+        <div class="members-list" id="membersList">
+          <div class="member-row">
+            <input type="text" placeholder="Nome e cognome" class="member-name">
+            <input type="email" placeholder="Email (opzionale)" class="member-email">
+            <button type="button" class="btn-remove" onclick="removeMember(this)">×</button>
+          </div>
+        </div>
+        <button type="button" class="btn-add-member" onclick="addMember()">+ Aggiungi membro</button>
+      </div>
+
+      <!-- Songs -->
+      <div class="card">
+        <div class="card-title">🎵 Le tue 2 canzoni</div>
+        <label>Canzone 1 <span class="required">*</span></label>
+        <div class="song-row">
+          <input type="text" name="song_1" required placeholder="Titolo canzone">
+          <input type="text" name="song_1_artist" placeholder="Artista (opzionale)">
+        </div>
+        <label>Canzone 2 <span class="required">*</span></label>
+        <div class="song-row">
+          <input type="text" name="song_2" required placeholder="Titolo canzone">
+          <input type="text" name="song_2_artist" placeholder="Artista (opzionale)">
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" class="btn-submit" id="submitBtn">🎤 Iscrivimi alla sfida!</button>
+    </form>
+
+    <!-- SUCCESS VIEW -->
+    <div id="successView" class="success-view hidden">
+      <div class="checkmark">✅</div>
+      <h2>Iscrizione Completata!</h2>
+      <p>Riceverai una email di conferma con i dettagli. Preparati a dare spettacolo!</p>
+      <p style="margin-top: 16px; color: var(--gold);">📅 7 Maggio 2026 • 🕗 20:00 • 📍 Jackie'O</p>
+    </div>
+  </div>
+
+  <footer>Sfida Karaoke 2026 — Our Films vs Frame by Frame</footer>
+
+  <script>
+    const form = document.getElementById('registrationForm');
+    const alertEl = document.getElementById('alert');
+    const groupSection = document.getElementById('groupSection');
+    const membersList = document.getElementById('membersList');
+    const successView = document.getElementById('successView');
+
+    // Get token from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+
+    // If we have a token, pre-fill from invite
+    if (token) {
+      fetch(`/api/register/invite/${token}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.invite) {
+            const inv = data.invite;
+            const nameInput = form.querySelector('[name="contact_name"]');
+            const emailInput = form.querySelector('[name="contact_email"]');
+            if (nameInput && inv.name) nameInput.value = inv.name;
+            if (emailInput && inv.email) emailInput.value = inv.email;
+            // Pre-select company
+            const companyRadio = form.querySelector(`[name="company"][value="${inv.company}"]`);
+            if (companyRadio) companyRadio.checked = true;
+
+            if (data.existingRegistration) {
+              showAlert('Hai già completato la registrazione! Se vuoi modificarla, contattaci via email.', 'error');
+              document.getElementById('submitBtn').disabled = true;
+            }
+          }
+        })
+        .catch(() => {});
+    }
+
+    function toggleGroupFields() {
+      const type = form.querySelector('[name="type"]:checked')?.value;
+      if (type === 'gruppo') {
+        groupSection.classList.remove('hidden');
+      } else {
+        groupSection.classList.add('hidden');
+      }
+    }
+
+    function addMember() {
+      const row = document.createElement('div');
+      row.className = 'member-row';
+      row.innerHTML = `
+        <input type="text" placeholder="Nome e cognome" class="member-name">
+        <input type="email" placeholder="Email (opzionale)" class="member-email">
+        <button type="button" class="btn-remove" onclick="removeMember(this)">×</button>
+      `;
+      membersList.appendChild(row);
+    }
+
+    function removeMember(btn) {
+      if (membersList.children.length > 1) {
+        btn.closest('.member-row').remove();
+      }
+    }
+
+    function showAlert(msg, type) {
+      alertEl.textContent = msg;
+      alertEl.className = `alert alert-${type}`;
+    }
+
+    function hideAlert() {
+      alertEl.className = 'alert';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Invio in corso...';
+
+      const type = form.querySelector('[name="type"]:checked')?.value;
+      const company = form.querySelector('[name="company"]:checked')?.value;
+
+      if (!company) {
+        showAlert('Seleziona la tua società', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🎤 Iscrivimi alla sfida!';
+        return;
+      }
+
+      // Collect members
+      let members = [];
+      if (type === 'gruppo') {
+        const rows = membersList.querySelectorAll('.member-row');
+        rows.forEach(row => {
+          const name = row.querySelector('.member-name').value.trim();
+          const email = row.querySelector('.member-email').value.trim();
+          if (name) members.push({ name, email: email || null });
+        });
+        if (members.length === 0) {
+          showAlert('Aggiungi almeno un membro al gruppo', 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = '🎤 Iscrivimi alla sfida!';
+          return;
+        }
+      }
+
+      const payload = {
+        token: token || null,
+        company,
+        type,
+        group_name: form.querySelector('[name="group_name"]')?.value || null,
+        contact_name: form.querySelector('[name="contact_name"]').value,
+        contact_email: form.querySelector('[name="contact_email"]').value,
+        song_1: form.querySelector('[name="song_1"]').value,
+        song_1_artist: form.querySelector('[name="song_1_artist"]').value || null,
+        song_2: form.querySelector('[name="song_2"]').value,
+        song_2_artist: form.querySelector('[name="song_2_artist"]').value || null,
+        members,
+      };
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showAlert(data.error || 'Errore durante la registrazione', 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = '🎤 Iscrivimi alla sfida!';
+          return;
+        }
+
+        // Success!
+        form.classList.add('hidden');
+        successView.classList.remove('hidden');
+        hideAlert();
+      } catch (err) {
+        showAlert('Errore di connessione. Riprova.', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🎤 Iscrivimi alla sfida!';
+      }
+    });
+  </script>
+</body>
+</html>
