@@ -389,6 +389,42 @@ router.get('/groups', async (req, res) => {
   }
 });
 
+// ========== UPDATE REGISTRATION DATA (admin edit) ==========
+router.put('/registrations/:id', async (req, res) => {
+  const { id } = req.params;
+  const {
+    contact_first_name, contact_last_name, contact_email,
+    company, type, group_name,
+    song_1, song_1_artist, song_2, song_2_artist
+  } = req.body;
+
+  try {
+    const firstName = (contact_first_name || '').trim();
+    const lastName = (contact_last_name || '').trim();
+    const fullName = `${firstName} ${lastName}`.trim();
+
+    const { rows } = await pool.query(
+      `UPDATE registrations SET
+        contact_first_name = $1, contact_last_name = $2, contact_name = $3, contact_email = $4,
+        company = $5, type = $6, group_name = $7,
+        song_1 = $8, song_1_artist = $9, song_2 = $10, song_2_artist = $11,
+        updated_at = NOW()
+       WHERE id = $12 RETURNING *`,
+      [firstName, lastName, fullName, contact_email, company, type, group_name || null,
+       song_1, song_1_artist || null, song_2, song_2_artist || null, id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Registrazione non trovata' });
+    }
+
+    res.json({ success: true, registration: rows[0] });
+  } catch (err) {
+    console.error('Admin update registration error:', err);
+    res.status(500).json({ error: 'Errore nell\'aggiornamento' });
+  }
+});
+
 // ========== EMAIL TRACKING DATA ==========
 router.get('/email-tracking', async (req, res) => {
   try {
@@ -409,9 +445,9 @@ router.get('/email-tracking', async (req, res) => {
 function buildStatusEmail(reg, status, message) {
   const participant = reg.type === 'gruppo' ? `gruppo "${reg.group_name}"` : reg.contact_name;
   const statusLabels = {
-    accepted: { subject: '✅ Iscrizione Accettata — Sfida Karaoke', color: '#22c55e', title: 'Iscrizione Accettata!' },
+    accepted: { subject: '✅ Candidatura Accettata — Sfida Karaoke', color: '#22c55e', title: 'Candidatura Accettata!' },
     revision: { subject: '📝 Richiesta Revisione — Sfida Karaoke', color: '#f59e0b', title: 'Revisione Richiesta' },
-    rejected: { subject: '❌ Iscrizione Non Accettata — Sfida Karaoke', color: '#ef4444', title: 'Iscrizione Non Accettata' },
+    rejected: { subject: '❌ Candidatura Non Accettata — Sfida Karaoke', color: '#ef4444', title: 'Candidatura Non Accettata' },
   };
   const s = statusLabels[status];
 
@@ -428,7 +464,7 @@ function buildStatusEmail(reg, status, message) {
           <h2 style="margin: 0; color: ${s.color};">${s.title}</h2>
         </div>
         <p style="color: #ccc; line-height: 1.6;">Ciao <strong style="color: #daa520;">${reg.contact_name}</strong>,</p>
-        <p style="color: #ccc; line-height: 1.6;">La tua iscrizione come <strong>${participant}</strong> per la Sfida Karaoke è stata esaminata.</p>
+        <p style="color: #ccc; line-height: 1.6;">La tua candidatura come <strong>${participant}</strong> per la Sfida Karaoke è stata esaminata.</p>
         ${message ? `<div style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin: 15px 0;"><p style="color: #ccc; margin: 0; line-height: 1.6;"><strong>Messaggio:</strong> ${message}</p></div>` : ''}
         <div style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin: 15px 0;">
           <p style="color: #999; margin: 0 0 5px; font-size: 13px;">Le tue canzoni:</p>
@@ -436,7 +472,7 @@ function buildStatusEmail(reg, status, message) {
           <p style="color: #daa520; margin: 5px 0 0;">🎵 ${reg.song_2}${reg.song_2_artist ? ` — ${reg.song_2_artist}` : ''}</p>
         </div>
         ${status === 'accepted' ? '<p style="color: #ccc; line-height: 1.6;">Ci vediamo il <strong style="color: #daa520;">7 maggio alle 20:00</strong> al <strong style="color: #daa520;">Jackie\'O</strong>, Via Boncompagni 11, Roma! 🎉</p>' : ''}
-        ${status === 'revision' ? '<p style="color: #ccc; line-height: 1.6;">Ti preghiamo di rivedere la tua iscrizione e riprovare. Se hai domande, rispondi a questa email.</p>' : ''}
+        ${status === 'revision' ? '<p style="color: #ccc; line-height: 1.6;">Ti preghiamo di rivedere la tua candidatura e riprovare. Se hai domande, rispondi a questa email.</p>' : ''}
       </div>
       <div style="padding: 20px; text-align: center; border-top: 1px solid #222;">
         <p style="color: #666; font-size: 12px; margin: 0;">Sfida Karaoke 2026 — Jackie\'O, Via Boncompagni 11, Roma</p>

@@ -138,6 +138,75 @@
     .group-songs .song-item { margin: 4px 0; }
     .group-songs .song-title { color: var(--gold); }
 
+    /* EXPANDABLE ROWS */
+    .reg-row { cursor: pointer; }
+    .reg-row td:first-child { position: relative; padding-left: 24px; }
+    .reg-row td:first-child::before {
+      content: '▸'; position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); font-size: 11px; transition: transform 0.2s;
+    }
+    .reg-row.expanded td:first-child::before { transform: translateY(-50%) rotate(90deg); }
+    .reg-detail { display: none; }
+    .reg-detail.show { display: table-row; }
+    .reg-detail td {
+      padding: 0 12px 16px 12px; border-bottom: 1px solid var(--border);
+      background: rgba(218,165,32,0.02);
+    }
+    .detail-panel {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+      padding: 16px; background: var(--bg-input); border-radius: 8px;
+    }
+    .detail-section h4 {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-muted); margin-bottom: 8px;
+    }
+    .detail-field { margin-bottom: 8px; }
+    .detail-field .dl { font-size: 11px; color: var(--text-muted); }
+    .detail-field .dv { font-size: 13px; color: var(--text); }
+    .detail-field input, .detail-field select {
+      width: 100%; padding: 6px 10px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-family: inherit; font-size: 13px; outline: none;
+    }
+    .detail-field input:focus, .detail-field select:focus { border-color: var(--gold); }
+    .detail-members-list { margin-top: 4px; }
+    .detail-member { padding: 3px 0; font-size: 13px; color: var(--text); }
+    .detail-member .dm-email { color: var(--text-muted); font-size: 11px; margin-left: 4px; }
+    .detail-actions {
+      grid-column: 1 / -1; display: flex; gap: 8px; justify-content: space-between;
+      align-items: center; padding-top: 12px; border-top: 1px solid var(--border);
+    }
+    .detail-actions .left { display: flex; gap: 6px; }
+    .detail-actions .right { display: flex; gap: 6px; }
+    .detail-btn {
+      padding: 7px 14px; border-radius: 6px; border: 1px solid var(--border);
+      background: transparent; color: var(--text-muted); font-family: inherit;
+      font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+    }
+    .detail-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .detail-btn-accept { border-color: rgba(34,197,94,0.3); color: var(--success); }
+    .detail-btn-accept:hover { background: rgba(34,197,94,0.08); }
+    .detail-btn-revise { border-color: rgba(245,158,11,0.3); color: var(--warning); }
+    .detail-btn-revise:hover { background: rgba(245,158,11,0.08); }
+    .detail-btn-reject { border-color: rgba(239,68,68,0.3); color: var(--error); }
+    .detail-btn-reject:hover { background: rgba(239,68,68,0.08); }
+    .detail-btn-save { border-color: var(--gold); color: var(--bg); background: var(--gold); }
+    .detail-btn-save:hover { opacity: 0.9; }
+
+    /* REG COUNTERS */
+    .reg-counters {
+      display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .reg-counter {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 6px; font-size: 13px; color: var(--text-muted);
+    }
+    .reg-counter strong { color: var(--text); font-size: 16px; }
+
+    @media (max-width: 640px) {
+      .detail-panel { grid-template-columns: 1fr; }
+    }
+
     /* SEARCH */
     .search-input {
       padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--border);
@@ -278,8 +347,9 @@
   <!-- ===== TAB: REGISTRATIONS ===== -->
   <div class="tab-content" id="tab-registrations">
     <div class="table-header">
-      <h2>📋 Iscrizioni</h2>
+      <h2>📋 Candidature</h2>
       <div class="filters">
+        <input type="text" class="search-input" id="regSearch" placeholder="Cerca nome, gruppo, email..." oninput="filterRegistrations()">
         <select id="filterCompany" onchange="loadRegistrations()">
           <option value="">Tutte le società</option>
           <option value="ourfilms">Our Films</option>
@@ -299,12 +369,13 @@
         </select>
       </div>
     </div>
+    <div class="reg-counters" id="regCounters"></div>
     <div class="scroll-x">
       <table>
         <thead>
           <tr>
             <th>Società</th><th>Tipo</th><th>Nome / Gruppo</th><th>Email</th>
-            <th>Canzone 1</th><th>Canzone 2</th><th>Membri</th><th>Stato</th><th>Azioni</th>
+            <th>Stato</th><th>Data</th>
           </tr>
         </thead>
         <tbody id="regTableBody"></tbody>
@@ -463,7 +534,7 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
       ${statCard('Email Inviate', e.total_sent, `OF: ${e.sent_ourfilms} | FBF: ${e.sent_framebyframe}`)}
       ${statCard('Tasso Apertura', e.total_sent > 0 ? Math.round(e.total_opened / e.total_sent * 100) + '%' : '—', `${e.total_opened} aperte su ${e.total_sent}`)}
       ${statCard('Tasso Click', e.total_sent > 0 ? Math.round(e.total_clicked / e.total_sent * 100) + '%' : '—', `${e.total_clicked} click su ${e.total_sent}`)}
-      ${statCard('Iscrizioni', r.total_registrations, `${r.total_solisti} solisti + ${r.total_gruppi} gruppi`)}
+      ${statCard('Candidature', r.total_registrations, `${r.total_solisti} solisti + ${r.total_gruppi} gruppi`)}
       ${statCard('Partecipanti', stats.totalParticipants, `Media gruppo: ${stats.avgGroupSize}`)}
       ${statCard('In Attesa', r.status_pending, 'da valutare')}
       ${statCard('Accettate', r.status_accepted, '')}
@@ -479,7 +550,7 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
       { label: `Inviate (${total})`, value: total, color: '#3b82f6' },
       { label: `Aperte (${opened})`, value: opened, color: '#8b5cf6' },
       { label: `Click (${clicked})`, value: clicked, color: '#f59e0b' },
-      { label: `Iscritti (${registered})`, value: registered, color: '#22c55e' },
+      { label: `Candidati (${registered})`, value: registered, color: '#22c55e' },
     ];
     document.getElementById('funnelBar').innerHTML = funnelData.map(d =>
       `<div class="segment" style="width: ${Math.max(d.value / total * 100, d.value > 0 ? 8 : 0)}%; background: ${d.color};"><span>${d.value > 0 ? d.label : ''}</span></div>`
@@ -526,6 +597,8 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
   }
 
   // ===== REGISTRATIONS =====
+  let allRegistrations = [];
+
   async function loadRegistrations() {
     const company = document.getElementById('filterCompany').value;
     const status = document.getElementById('filterStatus').value;
@@ -535,30 +608,178 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     if (status) params.set('status', status);
     if (type) params.set('type', type);
 
-    const regs = await api(`/registrations?${params}`);
+    allRegistrations = await api(`/registrations?${params}`);
+    document.getElementById('regSearch').value = '';
+    renderRegistrations(allRegistrations);
+  }
+
+  function filterRegistrations() {
+    const q = (document.getElementById('regSearch').value || '').toLowerCase();
+    if (!q) { renderRegistrations(allRegistrations); return; }
+    const filtered = allRegistrations.filter(r =>
+      (r.contact_name || '').toLowerCase().includes(q) ||
+      (r.group_name || '').toLowerCase().includes(q) ||
+      (r.contact_email || '').toLowerCase().includes(q) ||
+      (r.song_1 || '').toLowerCase().includes(q) ||
+      (r.song_2 || '').toLowerCase().includes(q)
+    );
+    renderRegistrations(filtered);
+  }
+
+  function renderRegistrations(regs) {
+    // Counters
+    const total = regs.length;
+    const ofCount = regs.filter(r => r.company === 'ourfilms').length;
+    const fbfCount = regs.filter(r => r.company === 'framebyframe').length;
+    const pendingCount = regs.filter(r => r.status === 'pending').length;
+    const acceptedCount = regs.filter(r => r.status === 'accepted').length;
+    const revisionCount = regs.filter(r => r.status === 'revision').length;
+    const rejectedCount = regs.filter(r => r.status === 'rejected').length;
+    document.getElementById('regCounters').innerHTML = `
+      <div class="reg-counter">Totale: <strong>${total}</strong></div>
+      <div class="reg-counter">Our Films: <strong>${ofCount}</strong></div>
+      <div class="reg-counter">Frame by Frame: <strong>${fbfCount}</strong></div>
+      <div class="reg-counter" style="border-color:rgba(255,255,255,0.08);">In attesa: <strong>${pendingCount}</strong></div>
+      <div class="reg-counter" style="border-color:rgba(34,197,94,0.3);">Accettate: <strong style="color:var(--success);">${acceptedCount}</strong></div>
+      <div class="reg-counter" style="border-color:rgba(245,158,11,0.3);">Revisione: <strong style="color:var(--warning);">${revisionCount}</strong></div>
+      <div class="reg-counter" style="border-color:rgba(239,68,68,0.3);">Rifiutate: <strong style="color:var(--error);">${rejectedCount}</strong></div>
+    `;
+
+    // Rows
     document.getElementById('regTableBody').innerHTML = regs.map(r => `
-      <tr>
+      <tr class="reg-row" onclick="toggleRegDetail(${r.id})" id="row-${r.id}">
         <td><span class="badge badge-${r.company}">${r.company === 'ourfilms' ? 'Our Films' : 'FBF'}</span></td>
         <td><span class="badge badge-${r.type}">${r.type}</span></td>
         <td><strong>${r.type === 'gruppo' ? r.group_name : r.contact_name}</strong>${r.type === 'gruppo' ? `<br><small style="color:var(--text-muted)">Ref: ${r.contact_name}</small>` : ''}</td>
         <td style="font-size:12px;">${r.contact_email}</td>
-        <td style="font-size:12px;">🎵 ${r.song_1}${r.song_1_artist ? ` <span style="color:var(--text-muted)">— ${r.song_1_artist}</span>` : ''}</td>
-        <td style="font-size:12px;">🎵 ${r.song_2}${r.song_2_artist ? ` <span style="color:var(--text-muted)">— ${r.song_2_artist}</span>` : ''}</td>
-        <td>${r.type === 'gruppo' ? r.members.map(m => m.name).join(', ') || '—' : '—'}</td>
         <td><span class="badge badge-${r.status}">${statusLabel(r.status)}</span></td>
-        <td>
-          <div class="action-btns">
-            ${r.status !== 'accepted' ? `<button class="action-btn accept" onclick="openStatusModal(${r.id},'accepted','${esc(r.contact_name)}')">✅</button>` : ''}
-            ${r.status !== 'revision' ? `<button class="action-btn revise" onclick="openStatusModal(${r.id},'revision','${esc(r.contact_name)}')">📝</button>` : ''}
-            ${r.status !== 'rejected' ? `<button class="action-btn reject" onclick="openStatusModal(${r.id},'rejected','${esc(r.contact_name)}')">❌</button>` : ''}
+        <td style="font-size:12px;color:var(--text-muted);">${new Date(r.created_at).toLocaleDateString('it-IT')}</td>
+      </tr>
+      <tr class="reg-detail" id="detail-${r.id}">
+        <td colspan="6">
+          <div class="detail-panel">
+            <div class="detail-section">
+              <h4>Dati Personali</h4>
+              <div class="detail-field">
+                <div class="dl">Nome</div>
+                <input type="text" id="df-fn-${r.id}" value="${esc(r.contact_first_name || '')}" placeholder="Nome">
+              </div>
+              <div class="detail-field">
+                <div class="dl">Cognome</div>
+                <input type="text" id="df-ln-${r.id}" value="${esc(r.contact_last_name || '')}" placeholder="Cognome">
+              </div>
+              <div class="detail-field">
+                <div class="dl">Email</div>
+                <input type="email" id="df-em-${r.id}" value="${esc(r.contact_email || '')}" placeholder="Email">
+              </div>
+              <div class="detail-field">
+                <div class="dl">Società</div>
+                <select id="df-co-${r.id}">
+                  <option value="ourfilms" ${r.company === 'ourfilms' ? 'selected' : ''}>Our Films</option>
+                  <option value="framebyframe" ${r.company === 'framebyframe' ? 'selected' : ''}>Frame by Frame</option>
+                </select>
+              </div>
+              <div class="detail-field">
+                <div class="dl">Tipo</div>
+                <select id="df-ty-${r.id}">
+                  <option value="solista" ${r.type === 'solista' ? 'selected' : ''}>Solista</option>
+                  <option value="gruppo" ${r.type === 'gruppo' ? 'selected' : ''}>Gruppo</option>
+                </select>
+              </div>
+              ${r.type === 'gruppo' ? `
+              <div class="detail-field">
+                <div class="dl">Nome Gruppo</div>
+                <input type="text" id="df-gn-${r.id}" value="${esc(r.group_name || '')}" placeholder="Nome gruppo">
+              </div>` : `<input type="hidden" id="df-gn-${r.id}" value="">`}
+            </div>
+            <div class="detail-section">
+              <h4>Canzoni</h4>
+              <div class="detail-field">
+                <div class="dl">Canzone 1</div>
+                <input type="text" id="df-s1-${r.id}" value="${esc(r.song_1 || '')}" placeholder="Titolo canzone 1">
+              </div>
+              <div class="detail-field">
+                <div class="dl">Artista 1</div>
+                <input type="text" id="df-a1-${r.id}" value="${esc(r.song_1_artist || '')}" placeholder="Artista">
+              </div>
+              <div class="detail-field">
+                <div class="dl">Canzone 2</div>
+                <input type="text" id="df-s2-${r.id}" value="${esc(r.song_2 || '')}" placeholder="Titolo canzone 2">
+              </div>
+              <div class="detail-field">
+                <div class="dl">Artista 2</div>
+                <input type="text" id="df-a2-${r.id}" value="${esc(r.song_2_artist || '')}" placeholder="Artista">
+              </div>
+              ${r.type === 'gruppo' && r.members && r.members.length > 0 ? `
+              <h4 style="margin-top:12px;">Membri del Gruppo</h4>
+              <div class="detail-members-list">
+                ${r.members.map(m => `<div class="detail-member">${m.name}${m.email ? `<span class="dm-email">(${m.email})</span>` : ''}</div>`).join('')}
+              </div>` : ''}
+            </div>
+            <div class="detail-actions">
+              <div class="left">
+                ${r.status !== 'accepted' ? `<button class="detail-btn detail-btn-accept" onclick="event.stopPropagation();openStatusModal(${r.id},'accepted','${esc(r.contact_name)}')">Accetta</button>` : ''}
+                ${r.status !== 'revision' ? `<button class="detail-btn detail-btn-revise" onclick="event.stopPropagation();openStatusModal(${r.id},'revision','${esc(r.contact_name)}')">Revisione</button>` : ''}
+                ${r.status !== 'rejected' ? `<button class="detail-btn detail-btn-reject" onclick="event.stopPropagation();openStatusModal(${r.id},'rejected','${esc(r.contact_name)}')">Rifiuta</button>` : ''}
+              </div>
+              <div class="right">
+                <button class="detail-btn detail-btn-save" onclick="event.stopPropagation();saveRegDetail(${r.id})">Salva Modifiche</button>
+              </div>
+            </div>
           </div>
         </td>
       </tr>
     `).join('');
   }
 
+  function toggleRegDetail(id) {
+    const row = document.getElementById(`row-${id}`);
+    const detail = document.getElementById(`detail-${id}`);
+    const wasExpanded = row.classList.contains('expanded');
+    // Close all other open details
+    document.querySelectorAll('.reg-row.expanded').forEach(r => {
+      r.classList.remove('expanded');
+      const dId = r.id.replace('row-', '');
+      document.getElementById(`detail-${dId}`).classList.remove('show');
+    });
+    if (!wasExpanded) {
+      row.classList.add('expanded');
+      detail.classList.add('show');
+    }
+  }
+
+  async function saveRegDetail(id) {
+    const data = {
+      contact_first_name: document.getElementById(`df-fn-${id}`).value,
+      contact_last_name: document.getElementById(`df-ln-${id}`).value,
+      contact_email: document.getElementById(`df-em-${id}`).value,
+      company: document.getElementById(`df-co-${id}`).value,
+      type: document.getElementById(`df-ty-${id}`).value,
+      group_name: document.getElementById(`df-gn-${id}`).value || null,
+      song_1: document.getElementById(`df-s1-${id}`).value,
+      song_1_artist: document.getElementById(`df-a1-${id}`).value || null,
+      song_2: document.getElementById(`df-s2-${id}`).value,
+      song_2_artist: document.getElementById(`df-a2-${id}`).value || null,
+    };
+    try {
+      const res = await fetch(`/api/admin/registrations/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        loadRegistrations();
+      } else {
+        const err = await res.json();
+        alert('Errore: ' + (err.error || 'Errore nel salvataggio'));
+      }
+    } catch (e) {
+      alert('Errore di connessione');
+    }
+  }
+
   function statusLabel(s) { return { pending: 'In attesa', accepted: 'Accettata', revision: 'Revisione', rejected: 'Rifiutata' }[s] || s; }
-  function esc(s) { return (s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+  function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
   // ===== STATUS MODAL =====
   let modalRegId = null, modalStatus = null;
@@ -566,7 +787,7 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
   function openStatusModal(id, status, name) {
     modalRegId = id;
     modalStatus = status;
-    const labels = { accepted: '✅ Accetta iscrizione', revision: '📝 Richiedi revisione', rejected: '❌ Rifiuta iscrizione' };
+    const labels = { accepted: '✅ Accetta candidatura', revision: '📝 Richiedi revisione', rejected: '❌ Rifiuta candidatura' };
     document.getElementById('modalTitle').textContent = labels[status];
     document.getElementById('modalSubtitle').textContent = `Partecipante: ${name}`;
     document.getElementById('modalMessage').value = '';
