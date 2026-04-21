@@ -72,6 +72,18 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`🎤 Sfida Karaoke server running on port ${PORT}`);
-});
+// Run migrations on startup, then start server
+const pool = require('./db');
+async function startServer() {
+  try {
+    await pool.query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS contact_first_name VARCHAR(255)`);
+    await pool.query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS contact_last_name VARCHAR(255)`);
+    console.log('✅ Database columns verified');
+  } catch (e) {
+    console.warn('⚠️ Migration check skipped:', e.message);
+  }
+  app.listen(PORT, () => {
+    console.log(`🎤 Sfida Karaoke server running on port ${PORT}`);
+  });
+}
+startServer();
