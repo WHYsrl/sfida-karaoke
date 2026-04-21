@@ -274,6 +274,121 @@ router.post('/send-invites', async (req, res) => {
   res.json(results);
 });
 
+// ========== ALL PARTICIPANTS (flat list: solisti + group contacts + group members) ==========
+router.get('/participants', async (req, res) => {
+  try {
+    const { company } = req.query;
+    const companyFilter = company ? `WHERE sub.company = '${company === 'ourfilms' ? 'ourfilms' : 'framebyframe'}'` : '';
+
+    const { rows } = await pool.query(`
+      SELECT * FROM (
+        -- Solisti
+        SELECT
+          r.id as registration_id,
+          r.contact_name as name,
+          COALESCE(r.contact_first_name, '') as first_name,
+          COALESCE(r.contact_last_name, '') as last_name,
+          r.contact_email as email,
+          r.company,
+          'solista' as role,
+          NULL as group_name,
+          r.status,
+          r.song_1, r.song_1_artist, r.song_2, r.song_2_artist,
+          r.created_at
+        FROM registrations r
+        WHERE r.type = 'solista'
+
+        UNION ALL
+
+        -- Group contacts (capogruppo)
+        SELECT
+          r.id as registration_id,
+          r.contact_name as name,
+          COALESCE(r.contact_first_name, '') as first_name,
+          COALESCE(r.contact_last_name, '') as last_name,
+          r.contact_email as email,
+          r.company,
+          'capogruppo' as role,
+          r.group_name,
+          r.status,
+          r.song_1, r.song_1_artist, r.song_2, r.song_2_artist,
+          r.created_at
+        FROM registrations r
+        WHERE r.type = 'gruppo'
+
+        UNION ALL
+
+        -- Group members
+        SELECT
+          r.id as registration_id,
+          gm.name as name,
+          '' as first_name,
+          '' as last_name,
+          COALESCE(gm.email, '') as email,
+          r.company,
+          'membro' as role,
+          r.group_name,
+          r.status,
+          r.song_1, r.song_1_artist, r.song_2, r.song_2_artist,
+          r.created_at
+        FROM group_members gm
+        JOIN registrations r ON r.id = gm.registration_id
+      ) sub
+      ${companyFilter}
+      ORDER BY sub.company, sub.group_name NULLS FIRST, sub.role, sub.name
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error('Participants error:', err);
+    res.status(500).json({ error: 'Errore nel recupero partecipanti' });
+  }
+});
+
+// ========== GROUPS DETAIL ==========
+router.get('/groups', async (req, res) => {
+  try {
+    const { company } = req.query;
+    let whereClause = "WHERE r.type = 'gruppo'";
+    const params = [];
+    if (company) {
+      params.push(company);
+      whereClause += ` AND r.company = $1`;
+    }
+
+    const { rows } = await pool.query(`
+      SELECT
+        r.id,
+        r.group_name,
+        r.company,
+        r.contact_name,
+        r.contact_email,
+        r.status,
+        r.song_1, r.song_1_artist,
+        r.song_2, r.song_2_artist,
+        r.created_at,
+        COALESCE(
+          json_agg(
+            json_build_object('id', gm.id, 'name', gm.name, 'email', gm.email)
+            ORDER BY gm.name
+          ) FILTER (WHERE gm.id IS NOT NULL),
+          '[]'
+        ) as members,
+        COUNT(gm.id) + 1 as total_members
+      FROM registrations r
+      LEFT JOIN group_members gm ON gm.registration_id = r.id
+      ${whereClause}
+      GROUP BY r.id
+      ORDER BY r.company, r.group_name
+    `, params);
+
+    res.json(rows);
+  } catch (err) {
+    console.error('Groups error:', err);
+    res.status(500).json({ error: 'Errore nel recupero gruppi' });
+  }
+});
+
 // ========== EMAIL TRACKING DATA ==========
 router.get('/email-tracking', async (req, res) => {
   try {

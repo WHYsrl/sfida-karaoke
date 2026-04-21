@@ -110,6 +110,40 @@
     .badge-accepted { background: rgba(34,197,94,0.15); color: #86efac; }
     .badge-revision { background: rgba(245,158,11,0.15); color: #fcd34d; }
     .badge-rejected { background: rgba(239,68,68,0.15); color: #fca5a5; }
+    .badge-capogruppo { background: rgba(245,158,11,0.15); color: #fcd34d; }
+    .badge-membro { background: rgba(139,92,246,0.15); color: #c4b5fd; }
+
+    /* GROUP CARDS */
+    .groups-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px; }
+    .group-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 20px; transition: border-color 0.2s;
+    }
+    .group-card:hover { border-color: rgba(218,165,32,0.3); }
+    .group-card-header {
+      display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;
+    }
+    .group-card-header h3 { font-size: 16px; color: var(--gold); margin: 0; }
+    .group-card-header .group-meta { font-size: 12px; color: var(--text-muted); text-align: right; }
+    .group-members-list { margin: 12px 0; }
+    .group-member-item {
+      display: flex; align-items: center; gap: 8px; padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13px;
+    }
+    .group-member-item:last-child { border-bottom: none; }
+    .group-member-item .member-role { width: 80px; flex-shrink: 0; }
+    .group-member-item .member-info { flex: 1; }
+    .group-member-item .member-email { color: var(--text-muted); font-size: 11px; }
+    .group-songs { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
+    .group-songs .song-item { margin: 4px 0; }
+    .group-songs .song-title { color: var(--gold); }
+
+    /* SEARCH */
+    .search-input {
+      padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-family: inherit; font-size: 13px; outline: none; width: 220px;
+    }
+    .search-input:focus { border-color: var(--gold); }
 
     .action-btns { display: flex; gap: 4px; }
     .action-btn {
@@ -211,7 +245,9 @@
   <h1>🎤 Sfida Karaoke — Admin</h1>
   <div class="nav">
     <button class="active" onclick="showTab('dashboard', this)">Dashboard</button>
-    <button onclick="showTab('registrations', this)">Iscrizioni</button>
+    <button onclick="showTab('registrations', this)">Candidature</button>
+    <button onclick="showTab('participants', this)">Partecipanti</button>
+    <button onclick="showTab('groups', this)">Gruppi</button>
     <button onclick="showTab('songs', this)">Canzoni</button>
     <button onclick="showTab('email-tracking', this)">Email</button>
     <button onclick="showTab('send-invites', this)">Invita</button>
@@ -274,6 +310,48 @@
         <tbody id="regTableBody"></tbody>
       </table>
     </div>
+  </div>
+
+  <!-- ===== TAB: PARTICIPANTS ===== -->
+  <div class="tab-content" id="tab-participants">
+    <div class="table-header">
+      <h2>👥 Tutti i Partecipanti</h2>
+      <div class="filters">
+        <input type="text" class="search-input" id="participantSearch" placeholder="Cerca nome..." oninput="filterParticipants()">
+        <select id="filterParticipantCompany" onchange="loadParticipants()">
+          <option value="">Tutte le societa</option>
+          <option value="ourfilms">Our Films</option>
+          <option value="framebyframe">Frame by Frame</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom: 12px; font-size: 13px; color: var(--text-muted);" id="participantCount"></div>
+    <div class="scroll-x">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th><th>Email</th><th>Societa</th><th>Ruolo</th><th>Gruppo</th><th>Stato</th>
+          </tr>
+        </thead>
+        <tbody id="participantsTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== TAB: GROUPS ===== -->
+  <div class="tab-content" id="tab-groups">
+    <div class="table-header">
+      <h2>🎭 Gruppi</h2>
+      <div class="filters">
+        <select id="filterGroupCompany" onchange="loadGroups()">
+          <option value="">Tutte le societa</option>
+          <option value="ourfilms">Our Films</option>
+          <option value="framebyframe">Frame by Frame</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom: 16px; font-size: 13px; color: var(--text-muted);" id="groupCount"></div>
+    <div class="groups-grid" id="groupsGrid"></div>
   </div>
 
   <!-- ===== TAB: SONGS ===== -->
@@ -369,6 +447,8 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     if (btn) btn.classList.add('active');
     if (tab === 'dashboard') loadDashboard();
     if (tab === 'registrations') loadRegistrations();
+    if (tab === 'participants') loadParticipants();
+    if (tab === 'groups') loadGroups();
     if (tab === 'songs') loadSongs();
     if (tab === 'email-tracking') loadEmailTracking();
   }
@@ -547,6 +627,103 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
         <td>${e.has_registered ? '<span class="badge badge-accepted">Sì</span>' : '<span class="badge badge-pending">No</span>'}</td>
       </tr>
     `).join('');
+  }
+
+  // ===== PARTICIPANTS =====
+  let allParticipants = [];
+
+  async function loadParticipants() {
+    const company = document.getElementById('filterParticipantCompany').value;
+    const params = company ? `?company=${company}` : '';
+    allParticipants = await api(`/participants${params}`);
+    renderParticipants(allParticipants);
+  }
+
+  function filterParticipants() {
+    const q = document.getElementById('participantSearch').value.toLowerCase();
+    const filtered = q ? allParticipants.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.email && p.email.toLowerCase().includes(q)) ||
+      (p.group_name && p.group_name.toLowerCase().includes(q))
+    ) : allParticipants;
+    renderParticipants(filtered);
+  }
+
+  function renderParticipants(data) {
+    const total = data.length;
+    const ofCount = data.filter(p => p.company === 'ourfilms').length;
+    const fbfCount = data.filter(p => p.company === 'framebyframe').length;
+    document.getElementById('participantCount').innerHTML =
+      `<strong>${total}</strong> partecipanti totali — Our Films: <strong>${ofCount}</strong> · Frame by Frame: <strong>${fbfCount}</strong>`;
+
+    document.getElementById('participantsTableBody').innerHTML = data.map(p => {
+      const roleLabel = { solista: 'Solista', capogruppo: 'Capogruppo', membro: 'Membro' }[p.role];
+      const roleBadge = { solista: 'solista', capogruppo: 'capogruppo', membro: 'membro' }[p.role];
+      return `
+        <tr>
+          <td><strong>${p.name}</strong></td>
+          <td style="font-size:12px;">${p.email || '<span style="color:var(--text-muted)">—</span>'}</td>
+          <td><span class="badge badge-${p.company}">${p.company === 'ourfilms' ? 'Our Films' : 'FBF'}</span></td>
+          <td><span class="badge badge-${roleBadge}">${roleLabel}</span></td>
+          <td>${p.group_name ? `<span style="color:var(--gold)">${p.group_name}</span>` : '—'}</td>
+          <td><span class="badge badge-${p.status}">${statusLabel(p.status)}</span></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // ===== GROUPS =====
+  async function loadGroups() {
+    const company = document.getElementById('filterGroupCompany').value;
+    const params = company ? `?company=${company}` : '';
+    const groups = await api(`/groups${params}`);
+
+    const totalGroups = groups.length;
+    const totalMembers = groups.reduce((sum, g) => sum + parseInt(g.total_members), 0);
+    document.getElementById('groupCount').innerHTML =
+      `<strong>${totalGroups}</strong> gruppi — <strong>${totalMembers}</strong> partecipanti totali nei gruppi`;
+
+    document.getElementById('groupsGrid').innerHTML = groups.map(g => {
+      const companyLabel = g.company === 'ourfilms' ? 'Our Films' : 'Frame by Frame';
+      const companyBadge = g.company === 'ourfilms' ? 'badge-ourfilms' : 'badge-framebyframe';
+      return `
+        <div class="group-card">
+          <div class="group-card-header">
+            <div>
+              <h3>${g.group_name}</h3>
+              <span class="badge ${companyBadge}" style="margin-top:4px;">${companyLabel}</span>
+              <span class="badge badge-${g.status}" style="margin-left:4px;">${statusLabel(g.status)}</span>
+            </div>
+            <div class="group-meta">
+              ${g.total_members} membri<br>
+              ${new Date(g.created_at).toLocaleDateString('it-IT')}
+            </div>
+          </div>
+          <div class="group-members-list">
+            <div class="group-member-item">
+              <span class="member-role"><span class="badge badge-capogruppo">Capogruppo</span></span>
+              <span class="member-info">
+                <strong>${g.contact_name}</strong>
+                <span class="member-email">${g.contact_email}</span>
+              </span>
+            </div>
+            ${g.members.map(m => `
+              <div class="group-member-item">
+                <span class="member-role"><span class="badge badge-membro">Membro</span></span>
+                <span class="member-info">
+                  ${m.name}
+                  ${m.email ? `<span class="member-email">${m.email}</span>` : ''}
+                </span>
+              </div>
+            `).join('')}
+          </div>
+          <div class="group-songs">
+            <div class="song-item">🎵 <span class="song-title">${g.song_1}</span>${g.song_1_artist ? ` — ${g.song_1_artist}` : ''}</div>
+            <div class="song-item">🎵 <span class="song-title">${g.song_2}</span>${g.song_2_artist ? ` — ${g.song_2_artist}` : ''}</div>
+          </div>
+        </div>
+      `;
+    }).join('') || '<p style="color:var(--text-muted)">Nessun gruppo registrato</p>';
   }
 
   // ===== SEND INVITES =====
