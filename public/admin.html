@@ -710,17 +710,25 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
                 <div class="dl">Artista 2</div>
                 <input type="text" id="df-a2-${r.id}" value="${esc(r.song_2_artist || '')}" placeholder="Artista">
               </div>
-              ${r.type === 'gruppo' && r.members && r.members.length > 0 ? `
+              ${r.type === 'gruppo' ? `
               <h4 style="margin-top:12px;">Membri del Gruppo</h4>
-              <div class="detail-members-list">
-                ${r.members.map(m => `<div class="detail-member">${m.name}${m.email ? `<span class="dm-email">(${m.email})</span>` : ''}</div>`).join('')}
-              </div>` : ''}
+              <div id="df-members-${r.id}">
+                ${(r.members || []).map((m, idx) => `
+                <div class="detail-field" style="display:flex;gap:6px;align-items:center;" data-member-row>
+                  <input type="text" style="flex:1;" value="${esc(m.name)}" placeholder="Nome membro" data-member-name>
+                  <input type="email" style="flex:1;" value="${esc(m.email || '')}" placeholder="Email (opzionale)" data-member-email>
+                  <button class="detail-btn detail-btn-reject" style="padding:4px 8px;flex-shrink:0;" onclick="event.stopPropagation();this.closest('[data-member-row]').remove();">✕</button>
+                </div>`).join('')}
+              </div>
+              <button class="detail-btn" style="margin-top:6px;font-size:11px;" onclick="event.stopPropagation();addMemberRow(${r.id})">+ Aggiungi membro</button>
+              ` : ''}
             </div>
             <div class="detail-actions">
               <div class="left">
                 ${r.status !== 'accepted' ? `<button class="detail-btn detail-btn-accept" onclick="event.stopPropagation();openStatusModal(${r.id},'accepted','${esc(r.contact_name)}')">Accetta</button>` : ''}
                 ${r.status !== 'revision' ? `<button class="detail-btn detail-btn-revise" onclick="event.stopPropagation();openStatusModal(${r.id},'revision','${esc(r.contact_name)}')">Revisione</button>` : ''}
                 ${r.status !== 'rejected' ? `<button class="detail-btn detail-btn-reject" onclick="event.stopPropagation();openStatusModal(${r.id},'rejected','${esc(r.contact_name)}')">Rifiuta</button>` : ''}
+                <button class="detail-btn" style="border-color:rgba(239,68,68,0.5);color:var(--error);" onclick="event.stopPropagation();confirmDeleteReg(${r.id},'${esc(r.type === 'gruppo' ? r.group_name : r.contact_name)}')">Elimina</button>
               </div>
               <div class="right">
                 <button class="detail-btn detail-btn-save" onclick="event.stopPropagation();saveRegDetail(${r.id})">Salva Modifiche</button>
@@ -748,18 +756,47 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     }
   }
 
+  function addMemberRow(regId) {
+    const container = document.getElementById(`df-members-${regId}`);
+    const row = document.createElement('div');
+    row.className = 'detail-field';
+    row.style.cssText = 'display:flex;gap:6px;align-items:center;';
+    row.setAttribute('data-member-row', '');
+    row.innerHTML = `
+      <input type="text" style="flex:1;" placeholder="Nome membro" data-member-name>
+      <input type="email" style="flex:1;" placeholder="Email (opzionale)" data-member-email>
+      <button class="detail-btn detail-btn-reject" style="padding:4px 8px;flex-shrink:0;" onclick="event.stopPropagation();this.closest('[data-member-row]').remove();">✕</button>
+    `;
+    container.appendChild(row);
+  }
+
+  function getMembers(regId) {
+    const container = document.getElementById(`df-members-${regId}`);
+    if (!container) return [];
+    const rows = container.querySelectorAll('[data-member-row]');
+    const members = [];
+    rows.forEach(row => {
+      const name = row.querySelector('[data-member-name]').value.trim();
+      const email = row.querySelector('[data-member-email]').value.trim();
+      if (name) members.push({ name, email: email || null });
+    });
+    return members;
+  }
+
   async function saveRegDetail(id) {
+    const type = document.getElementById(`df-ty-${id}`).value;
     const data = {
       contact_first_name: document.getElementById(`df-fn-${id}`).value,
       contact_last_name: document.getElementById(`df-ln-${id}`).value,
       contact_email: document.getElementById(`df-em-${id}`).value,
       company: document.getElementById(`df-co-${id}`).value,
-      type: document.getElementById(`df-ty-${id}`).value,
-      group_name: document.getElementById(`df-gn-${id}`).value || null,
+      type: type,
+      group_name: document.getElementById(`df-gn-${id}`)?.value || null,
       song_1: document.getElementById(`df-s1-${id}`).value,
       song_1_artist: document.getElementById(`df-a1-${id}`).value || null,
       song_2: document.getElementById(`df-s2-${id}`).value,
       song_2_artist: document.getElementById(`df-a2-${id}`).value || null,
+      members: type === 'gruppo' ? getMembers(id) : [],
     };
     try {
       const res = await fetch(`/api/admin/registrations/${id}`, {
@@ -772,6 +809,25 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
       } else {
         const err = await res.json();
         alert('Errore: ' + (err.error || 'Errore nel salvataggio'));
+      }
+    } catch (e) {
+      alert('Errore di connessione');
+    }
+  }
+
+  async function confirmDeleteReg(id, name) {
+    if (!confirm(`Sei sicuro di voler eliminare la candidatura di "${name}"? Questa azione è irreversibile.`)) return;
+    try {
+      const res = await fetch(`/api/admin/registrations/${id}`, {
+        method: 'DELETE',
+        headers: { 'X-Admin-Password': adminPassword },
+      });
+      if (res.ok) {
+        loadRegistrations();
+        loadDashboard();
+      } else {
+        const err = await res.json();
+        alert('Errore: ' + (err.error || 'Errore nella cancellazione'));
       }
     } catch (e) {
       alert('Errore di connessione');

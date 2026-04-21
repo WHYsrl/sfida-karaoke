@@ -327,6 +327,44 @@ router.post('/', async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    // Send confirmation emails (non-blocking — don't fail the registration if email fails)
+    try {
+      const resend = getResend();
+      if (resend) {
+        const companyLabel = company === 'ourfilms' ? 'Our Films' : 'Frame by Frame';
+        const participant = type === 'gruppo' ? `gruppo "${group_name}"` : fullName;
+
+        // Email to the contact/soloist
+        await resend.emails.send({
+          from: process.env.RESEND_FROM_EMAIL || 'Sfida Karaoke <karaoke@yourdomain.com>',
+          to: [contact_email],
+          subject: '🎤 Candidatura Ricevuta — Sfida Karaoke',
+          html: buildConfirmationEmail(fullName, participant, companyLabel, song_1, song_1_artist, song_2, song_2_artist, type === 'gruppo' ? members : null),
+        });
+
+        // If group, email each member who has an email
+        if (type === 'gruppo' && members && members.length > 0) {
+          for (const member of members) {
+            if (member.email) {
+              try {
+                await resend.emails.send({
+                  from: process.env.RESEND_FROM_EMAIL || 'Sfida Karaoke <karaoke@yourdomain.com>',
+                  to: [member.email],
+                  subject: '🎤 Candidatura Ricevuta — Sfida Karaoke',
+                  html: buildMemberConfirmationEmail(member.name, group_name, fullName, companyLabel, song_1, song_1_artist, song_2, song_2_artist),
+                });
+              } catch (memberEmailErr) {
+                console.error(`Error sending confirmation to member ${member.email}:`, memberEmailErr.message);
+              }
+            }
+          }
+        }
+      }
+    } catch (emailErr) {
+      console.error('Error sending confirmation email:', emailErr.message);
+    }
+
     res.status(201).json({ success: true, registrationId, message: 'Candidatura inviata! Riceverai una email con l\'esito della valutazione.' });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -336,5 +374,77 @@ router.post('/', async (req, res) => {
     client.release();
   }
 });
+
+// ========== EMAIL TEMPLATE: Confirmation for contact/soloist ==========
+function buildConfirmationEmail(name, participant, companyLabel, song1, song1Artist, song2, song2Artist, members) {
+  const membersHtml = members && members.length > 0
+    ? `<div style="margin-top:12px;">
+        <p style="color:#999;margin:0 0 6px;font-size:13px;">Membri del gruppo:</p>
+        ${members.map(m => `<p style="color:#ccc;margin:2px 0;font-size:13px;">→ ${m.name}${m.email ? ` (${m.email})` : ''}</p>`).join('')}
+      </div>`
+    : '';
+
+  return `
+  <div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:600px;margin:0 auto;background:#0c0c0e;color:#e8e6e1;border-radius:12px;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#b8860b,#c9a84c,#b8860b);padding:28px;text-align:center;">
+      <h1 style="margin:0;font-size:22px;color:#0c0c0e;font-weight:700;">🎤 SFIDA KARAOKE</h1>
+      <p style="margin:6px 0 0;color:#0c0c0e;font-size:14px;">Our Films vs Frame by Frame</p>
+    </div>
+    <div style="padding:28px;">
+      <div style="background:rgba(34,197,94,0.1);border-left:4px solid #22c55e;padding:14px;border-radius:0 8px 8px 0;margin-bottom:20px;">
+        <h2 style="margin:0;color:#22c55e;font-size:18px;">Candidatura Ricevuta!</h2>
+      </div>
+      <p style="color:#ccc;line-height:1.6;">Ciao <strong style="color:#c9a84c;">${name}</strong>,</p>
+      <p style="color:#ccc;line-height:1.6;">Abbiamo ricevuto la tua candidatura come <strong>${participant}</strong> per il team <strong style="color:#c9a84c;">${companyLabel}</strong>.</p>
+      <div style="background:#1a1a1a;padding:16px;border-radius:8px;margin:16px 0;">
+        <p style="color:#999;margin:0 0 8px;font-size:13px;">Le tue canzoni:</p>
+        <p style="color:#c9a84c;margin:0;">🎵 ${song1}${song1Artist ? ` — ${song1Artist}` : ''}</p>
+        <p style="color:#c9a84c;margin:6px 0 0;">🎵 ${song2}${song2Artist ? ` — ${song2Artist}` : ''}</p>
+        ${membersHtml}
+      </div>
+      <p style="color:#ccc;line-height:1.6;">La tua candidatura sarà valutata dal team organizzativo. Riceverai una email con l'esito.</p>
+      <div style="background:#1a1a1a;padding:16px;border-radius:8px;margin:16px 0;">
+        <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">📅 Giovedì 7 Maggio 2026</p>
+        <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">🕗 Ore 20:00 — 24:00</p>
+        <p style="color:#c9a84c;margin:0;font-weight:600;">📍 Jackie'O — Via Boncompagni 11, Roma</p>
+      </div>
+    </div>
+    <div style="padding:16px;text-align:center;border-top:1px solid #222;">
+      <p style="color:#666;font-size:12px;margin:0;">Sfida Karaoke 2026 — Jackie'O, Via Boncompagni 11, Roma</p>
+    </div>
+  </div>`;
+}
+
+// ========== EMAIL TEMPLATE: Confirmation for group member ==========
+function buildMemberConfirmationEmail(memberName, groupName, contactName, companyLabel, song1, song1Artist, song2, song2Artist) {
+  return `
+  <div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:600px;margin:0 auto;background:#0c0c0e;color:#e8e6e1;border-radius:12px;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#b8860b,#c9a84c,#b8860b);padding:28px;text-align:center;">
+      <h1 style="margin:0;font-size:22px;color:#0c0c0e;font-weight:700;">🎤 SFIDA KARAOKE</h1>
+      <p style="margin:6px 0 0;color:#0c0c0e;font-size:14px;">Our Films vs Frame by Frame</p>
+    </div>
+    <div style="padding:28px;">
+      <div style="background:rgba(34,197,94,0.1);border-left:4px solid #22c55e;padding:14px;border-radius:0 8px 8px 0;margin-bottom:20px;">
+        <h2 style="margin:0;color:#22c55e;font-size:18px;">Sei nel gruppo!</h2>
+      </div>
+      <p style="color:#ccc;line-height:1.6;">Ciao <strong style="color:#c9a84c;">${memberName}</strong>,</p>
+      <p style="color:#ccc;line-height:1.6;"><strong>${contactName}</strong> ti ha inserito nel gruppo <strong style="color:#c9a84c;">"${groupName}"</strong> per la Sfida Karaoke, team <strong style="color:#c9a84c;">${companyLabel}</strong>.</p>
+      <div style="background:#1a1a1a;padding:16px;border-radius:8px;margin:16px 0;">
+        <p style="color:#999;margin:0 0 8px;font-size:13px;">Le canzoni scelte dal gruppo:</p>
+        <p style="color:#c9a84c;margin:0;">🎵 ${song1}${song1Artist ? ` — ${song1Artist}` : ''}</p>
+        <p style="color:#c9a84c;margin:6px 0 0;">🎵 ${song2}${song2Artist ? ` — ${song2Artist}` : ''}</p>
+      </div>
+      <p style="color:#ccc;line-height:1.6;">La candidatura sarà valutata dal team organizzativo. Riceverete una comunicazione con l'esito.</p>
+      <div style="background:#1a1a1a;padding:16px;border-radius:8px;margin:16px 0;">
+        <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">📅 Giovedì 7 Maggio 2026</p>
+        <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">🕗 Ore 20:00 — 24:00</p>
+        <p style="color:#c9a84c;margin:0;font-weight:600;">📍 Jackie'O — Via Boncompagni 11, Roma</p>
+      </div>
+    </div>
+    <div style="padding:16px;text-align:center;border-top:1px solid #222;">
+      <p style="color:#666;font-size:12px;margin:0;">Sfida Karaoke 2026 — Jackie'O, Via Boncompagni 11, Roma</p>
+    </div>
+  </div>`;
+}
 
 module.exports = router;

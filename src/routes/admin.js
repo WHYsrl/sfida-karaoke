@@ -395,15 +395,19 @@ router.put('/registrations/:id', async (req, res) => {
   const {
     contact_first_name, contact_last_name, contact_email,
     company, type, group_name,
-    song_1, song_1_artist, song_2, song_2_artist
+    song_1, song_1_artist, song_2, song_2_artist,
+    members
   } = req.body;
 
+  const client = await pool.connect();
   try {
     const firstName = (contact_first_name || '').trim();
     const lastName = (contact_last_name || '').trim();
     const fullName = `${firstName} ${lastName}`.trim();
 
-    const { rows } = await pool.query(
+    await client.query('BEGIN');
+
+    const { rows } = await client.query(
       `UPDATE registrations SET
         contact_first_name = $1, contact_last_name = $2, contact_name = $3, contact_email = $4,
         company = $5, type = $6, group_name = $7,
@@ -415,13 +419,56 @@ router.put('/registrations/:id', async (req, res) => {
     );
 
     if (rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Registrazione non trovata' });
     }
 
+    // Replace group members
+    await client.query('DELETE FROM group_members WHERE registration_id = $1', [id]);
+    if (type === 'gruppo' && members && members.length > 0) {
+      for (const member of members) {
+        if (member.name && member.name.trim()) {
+          await client.query(
+            'INSERT INTO group_members (registration_id, name, email) VALUES ($1, $2, $3)',
+            [id, member.name.trim(), member.email || null]
+          );
+        }
+      }
+    }
+
+    await client.query('COMMIT');
     res.json({ success: true, registration: rows[0] });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Admin update registration error:', err);
     res.status(500).json({ error: 'Errore nell\'aggiornamento' });
+  } finally {
+    client.release();
+  }
+});
+
+// ========== DELETE REGISTRATION ==========
+router.delete('/registrations/:id', async (req, res) => {
+  const { id } = req.params;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM group_members WHERE registration_id = $1', [id]);
+    await client.query('DELETE FROM admin_emails WHERE registration_id = $1', [id]);
+    await client.query('DELETE FROM otp_codes WHERE registration_id = $1', [id]);
+    const { rowCount } = await client.query('DELETE FROM registrations WHERE id = $1', [id]);
+    if (rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Registrazione non trovata' });
+    }
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'Candidatura eliminata' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Delete registration error:', err);
+    res.status(500).json({ error: 'Errore nella cancellazione' });
+  } finally {
+    client.release();
   }
 });
 
