@@ -4,7 +4,13 @@ const pool = require('../db');
 const { adminAuth } = require('../middleware/auth');
 const { Resend } = require('resend');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY not set — email sending disabled');
+    return null;
+  }
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 // All admin routes require authentication
 router.use(adminAuth);
@@ -185,13 +191,16 @@ router.put('/registrations/:id/status', async (req, res) => {
     let resendMessageId = null;
 
     try {
-      const emailResult = await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || 'Sfida Karaoke <karaoke@yourdomain.com>',
-        to: [reg.contact_email],
-        subject: emailContent.subject,
-        html: emailContent.html,
-      });
-      resendMessageId = emailResult.data?.id || null;
+      const resend = getResend();
+      if (resend) {
+        const emailResult = await resend.emails.send({
+          from: process.env.RESEND_FROM_EMAIL || 'Sfida Karaoke <karaoke@yourdomain.com>',
+          to: [reg.contact_email],
+          subject: emailContent.subject,
+          html: emailContent.html,
+        });
+        resendMessageId = emailResult.data?.id || null;
+      }
     } catch (emailErr) {
       console.error('Error sending status email:', emailErr);
       // Don't fail the whole operation if email fails
@@ -237,6 +246,8 @@ router.post('/send-invites', async (req, res) => {
       );
 
       // Send email via Resend
+      const resend = getResend();
+      if (!resend) throw new Error('RESEND_API_KEY not configured');
       const emailResult = await resend.emails.send({
         from: process.env.RESEND_FROM_EMAIL || 'Sfida Karaoke <karaoke@yourdomain.com>',
         to: [r.email],
