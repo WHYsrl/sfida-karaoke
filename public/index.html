@@ -40,12 +40,36 @@
       -webkit-font-smoothing: antialiased;
     }
 
+    /* ===== BACKGROUND ===== */
+    .page-wrapper {
+      min-height: 100vh;
+      background: url('/img/bg-karaoke.jpg') center top / cover no-repeat fixed;
+      position: relative;
+    }
+    .page-wrapper::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(12,12,14,0.45) 0%,
+        rgba(12,12,14,0.7) 30%,
+        rgba(12,12,14,0.88) 60%,
+        rgba(12,12,14,0.95) 100%
+      );
+      pointer-events: none;
+      z-index: 0;
+    }
+    .page-wrapper > * {
+      position: relative;
+      z-index: 1;
+    }
+
     /* ===== HERO ===== */
     .hero {
       text-align: center;
       padding: 56px 24px 40px;
       position: relative;
-      background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 100%);
     }
     .hero::after {
       content: '';
@@ -54,7 +78,7 @@
       left: 10%;
       right: 10%;
       height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(201,168,76,0.2), transparent);
+      background: linear-gradient(90deg, transparent, rgba(201,168,76,0.3), transparent);
     }
 
     .hero-eyebrow {
@@ -122,6 +146,10 @@
       max-width: 520px;
       margin: 0 auto;
       padding: 32px 20px 60px;
+    }
+
+    footer {
+      background: transparent;
     }
 
     /* ===== SECTIONS ===== */
@@ -459,6 +487,7 @@
   </style>
 </head>
 <body>
+<div class="page-wrapper">
 
   <!-- HERO -->
   <header class="hero">
@@ -620,6 +649,8 @@
   </div>
 
   <footer>Sfida Karaoke 2026 &mdash; Our Films &amp; Frame by Frame</footer>
+
+</div><!-- /page-wrapper -->
 
   <script>
     const form = document.getElementById('registrationForm');
