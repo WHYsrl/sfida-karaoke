@@ -22,5 +22,5 @@ services:
 
 databases:
   - name: sfida-karaoke-db
-    plan: free
+    plan: starter
     databaseName: sfida_karaoke
