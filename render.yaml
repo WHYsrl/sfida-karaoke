@@ -2,7 +2,7 @@ services:
   - type: web
     name: sfida-karaoke
     runtime: node
-    buildCommand: npm install && npm run db:init
+    buildCommand: npm install && npm run db:init && node src/migrate-v2.js
     startCommand: npm start
     envVars:
       - key: DATABASE_URL
@@ -22,5 +22,5 @@ services:
 
 databases:
   - name: sfida-karaoke-db
-    plan: basic-256mb
+    plan: free
     databaseName: sfida_karaoke

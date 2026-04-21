@@ -5,119 +5,133 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sfida Karaoke — Our Films vs Frame by Frame</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --gold: #daa520;
-      --gold-dark: #b8860b;
-      --gold-light: #f0d060;
-      --bg: #0a0a0a;
-      --bg-card: #111111;
-      --bg-input: #1a1a1a;
-      --text: #f0f0f0;
-      --text-muted: #888;
-      --border: #2a2a2a;
-      --error: #ef4444;
-      --success: #22c55e;
+      --gold: #c9a84c;
+      --gold-hover: #d4b65e;
+      --gold-muted: rgba(201,168,76,0.15);
+      --gold-subtle: rgba(201,168,76,0.08);
+      --bg: #0c0c0e;
+      --bg-elevated: #141416;
+      --bg-input: #1b1b1f;
+      --text: #e8e6e1;
+      --text-secondary: #9a9890;
+      --text-dim: #5a5850;
+      --border: rgba(255,255,255,0.06);
+      --border-hover: rgba(255,255,255,0.12);
+      --error: #d4493f;
+      --error-bg: rgba(212,73,63,0.08);
+      --success: #4a9e6e;
+      --success-bg: rgba(74,158,110,0.08);
+      --radius: 10px;
+      --radius-lg: 16px;
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     body {
-      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      line-height: 1.5;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
     }
 
     /* ===== HERO ===== */
     .hero {
-      background: linear-gradient(180deg, #1a1400 0%, var(--bg) 100%);
       text-align: center;
-      padding: 40px 20px 30px;
+      padding: 56px 24px 40px;
       position: relative;
-      overflow: hidden;
+      background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 100%);
     }
-    .hero::before {
+    .hero::after {
       content: '';
       position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(ellipse at center, rgba(218,165,32,0.08) 0%, transparent 70%);
-      animation: pulse 4s ease-in-out infinite;
+      bottom: 0;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(201,168,76,0.2), transparent);
     }
-    @keyframes pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
 
+    .hero-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 12px;
+    }
     .hero h1 {
-      font-size: clamp(28px, 6vw, 42px);
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      position: relative;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(32px, 7vw, 48px);
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      line-height: 1.15;
     }
-    .hero .subtitle {
-      font-size: clamp(14px, 3vw, 18px);
-      color: var(--text-muted);
-      margin-top: 6px;
-      position: relative;
+    .hero h1 em {
+      font-style: italic;
+      color: var(--gold);
     }
-    .hero .vs-badge {
+
+    .hero-teams {
       display: inline-flex;
       align-items: center;
-      gap: 12px;
-      margin: 16px 0;
-      font-size: clamp(14px, 3vw, 16px);
-      font-weight: 600;
-      position: relative;
+      gap: 16px;
+      margin: 20px 0 24px;
+      font-size: 15px;
+      font-weight: 500;
     }
-    .vs-badge .company { color: var(--gold); }
-    .vs-badge .vs {
-      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
-      color: var(--bg);
-      padding: 2px 10px;
-      border-radius: 4px;
-      font-weight: 800;
-      font-size: 13px;
+    .hero-teams .team-name { color: var(--text); }
+    .hero-teams .vs {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      color: var(--gold);
+      font-size: 14px;
     }
-    .event-info {
+
+    .hero-details {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 12px 24px;
-      margin-top: 12px;
-      font-size: 14px;
-      color: var(--text-muted);
-      position: relative;
+      gap: 8px 20px;
+      font-size: 13px;
+      color: var(--text-secondary);
     }
-    .event-info span { display: flex; align-items: center; gap: 6px; }
-
-    /* ===== FORM CONTAINER ===== */
-    .container {
-      max-width: 560px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 16px;
-    }
-    .card-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--gold);
-      margin-bottom: 16px;
+    .hero-details span {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+    }
+    .hero-details .dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--text-dim);
+    }
+
+    /* ===== CONTAINER ===== */
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    /* ===== SECTIONS ===== */
+    .section {
+      margin-bottom: 28px;
+    }
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 12px;
     }
 
     /* ===== FORM ELEMENTS ===== */
@@ -125,319 +139,378 @@
       display: block;
       font-size: 13px;
       font-weight: 500;
-      color: var(--text-muted);
+      color: var(--text-secondary);
       margin-bottom: 6px;
     }
-    label .required { color: var(--gold); }
+    label .req { color: var(--gold); font-weight: 400; }
 
     input, select, textarea {
       width: 100%;
-      padding: 12px 14px;
+      padding: 11px 14px;
       background: var(--bg-input);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: var(--radius);
       color: var(--text);
       font-family: inherit;
-      font-size: 15px;
-      transition: border-color 0.2s;
+      font-size: 14px;
+      transition: border-color var(--transition), box-shadow var(--transition);
       outline: none;
     }
     input:focus, select:focus, textarea:focus {
-      border-color: var(--gold);
+      border-color: rgba(201,168,76,0.4);
+      box-shadow: 0 0 0 3px rgba(201,168,76,0.08);
     }
-    input::placeholder, textarea::placeholder { color: #555; }
-    select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6.5 6.5-6.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
-    select option { background: var(--bg-input); color: var(--text); }
-
-    .form-row { margin-bottom: 14px; }
-    .form-row-inline { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
-    @media (max-width: 480px) { .form-row-inline { grid-template-columns: 1fr; } }
-
-    /* ===== COMPANY SELECTOR ===== */
-    .company-selector {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 4px;
-    }
-    .company-option {
-      position: relative;
+    input::placeholder, textarea::placeholder { color: var(--text-dim); }
+    select {
       cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%235a5850' viewBox='0 0 16 16'%3E%3Cpath d='M3 6l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 34px;
     }
-    .company-option input { display: none; }
-    .company-option .company-label {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      padding: 16px 12px;
-      background: var(--bg-input);
-      border: 2px solid var(--border);
-      border-radius: 10px;
-      transition: all 0.2s;
-      text-align: center;
-    }
-    .company-option input:checked + .company-label {
-      border-color: var(--gold);
-      background: rgba(218,165,32,0.08);
-    }
-    .company-option .company-label:hover { border-color: var(--gold-dark); }
-    .company-option .company-name { font-weight: 600; font-size: 15px; }
 
-    /* ===== TYPE SELECTOR ===== */
-    .type-selector {
+    .field { margin-bottom: 14px; }
+    .field-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 10px;
+      margin-bottom: 14px;
     }
-    .type-option { position: relative; cursor: pointer; }
-    .type-option input { display: none; }
-    .type-option .type-label {
+
+    /* ===== TOGGLE CARDS (Company / Type) ===== */
+    .toggle-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .toggle-option { position: relative; cursor: pointer; }
+    .toggle-option input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+    .toggle-card {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      padding: 14px;
-      background: var(--bg-input);
-      border: 2px solid var(--border);
-      border-radius: 10px;
-      transition: all 0.2s;
-      font-weight: 500;
+      gap: 10px;
+      padding: 14px 16px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: all var(--transition);
+      text-align: center;
     }
-    .type-option input:checked + .type-label {
+    .toggle-card:hover { border-color: var(--border-hover); }
+    .toggle-option input:checked + .toggle-card {
       border-color: var(--gold);
-      background: rgba(218,165,32,0.08);
+      background: var(--gold-subtle);
     }
-    .type-option .type-label:hover { border-color: var(--gold-dark); }
+    .toggle-card .label-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .toggle-card .label-icon { font-size: 18px; line-height: 1; }
 
     /* ===== GROUP MEMBERS ===== */
     .members-list { display: flex; flex-direction: column; gap: 10px; }
     .member-row {
       display: grid;
-      grid-template-columns: 1fr 1fr 36px;
+      grid-template-columns: 1fr 1fr 1fr 32px;
       gap: 8px;
-      align-items: center;
+      align-items: end;
     }
-    @media (max-width: 480px) { .member-row { grid-template-columns: 1fr 36px; } .member-row input:nth-child(2) { grid-column: 1; } .member-row button { grid-column: 2; grid-row: 1 / span 2; align-self: center; } }
-
-    .btn-remove {
-      width: 36px;
-      height: 36px;
-      border: 1px solid #333;
-      background: transparent;
-      color: #666;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 18px;
+    .btn-remove-member {
+      width: 32px;
+      height: 38px;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 16px;
+      transition: all var(--transition);
     }
-    .btn-remove:hover { border-color: var(--error); color: var(--error); }
+    .btn-remove-member:hover { border-color: var(--error); color: var(--error); }
 
-    .btn-add-member {
+    .btn-add {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
       background: transparent;
       border: 1px dashed var(--border);
-      color: var(--text-muted);
-      padding: 10px;
-      border-radius: 8px;
+      color: var(--text-secondary);
+      border-radius: var(--radius);
       cursor: pointer;
       font-family: inherit;
-      font-size: 14px;
-      transition: all 0.2s;
-      margin-top: 6px;
-      width: 100%;
+      font-size: 13px;
+      transition: all var(--transition);
     }
-    .btn-add-member:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-add:hover { border-color: var(--gold); color: var(--gold); }
 
-    /* ===== SONG INPUTS ===== */
-    .song-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-    @media (max-width: 480px) { .song-row { grid-template-columns: 1fr; } }
+    /* ===== SONGS ===== */
+    .song-group { margin-bottom: 14px; }
+    .song-group .song-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .song-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
 
     /* ===== SUBMIT ===== */
     .btn-submit {
       width: 100%;
-      padding: 16px;
-      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+      padding: 15px;
+      margin-top: 8px;
+      background: var(--gold);
       color: var(--bg);
       border: none;
-      border-radius: 10px;
+      border-radius: var(--radius);
       font-family: inherit;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(218,165,32,0.3); }
-    .btn-submit:active { transform: translateY(0); }
-    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-
-    /* ===== MESSAGES ===== */
-    .alert {
-      padding: 14px 16px;
-      border-radius: 8px;
       font-size: 14px;
-      margin-bottom: 16px;
-      display: none;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: all var(--transition);
     }
-    .alert-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; display: block; }
-    .alert-success { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #86efac; display: block; }
+    .btn-submit:hover { background: var(--gold-hover); box-shadow: 0 2px 16px rgba(201,168,76,0.2); }
+    .btn-submit:active { transform: scale(0.995); }
+    .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+    /* ===== ALERTS ===== */
+    .alert {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      margin-bottom: 20px;
+      display: none;
+      line-height: 1.5;
+    }
+    .alert-error { background: var(--error-bg); border: 1px solid rgba(212,73,63,0.2); color: #e8a09b; display: block; }
+    .alert-success { background: var(--success-bg); border: 1px solid rgba(74,158,110,0.2); color: #8fd4ad; display: block; }
 
     /* ===== SUCCESS VIEW ===== */
     .success-view {
       text-align: center;
-      padding: 40px 20px;
+      padding: 48px 20px;
     }
-    .success-view .checkmark {
-      width: 80px;
-      height: 80px;
+    .success-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 24px;
       border-radius: 50%;
-      background: rgba(34,197,94,0.12);
+      background: var(--success-bg);
+      border: 1px solid rgba(74,158,110,0.15);
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 20px;
-      font-size: 40px;
+      font-size: 28px;
     }
-    .success-view h2 { color: var(--gold); margin-bottom: 12px; }
-    .success-view p { color: var(--text-muted); }
+    .success-view h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .success-view p { color: var(--text-secondary); font-size: 14px; }
+    .success-view .event-reminder {
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 24px;
+      padding: 12px 20px;
+      background: var(--gold-subtle);
+      border: 1px solid rgba(201,168,76,0.15);
+      border-radius: var(--radius);
+      font-size: 13px;
+      color: var(--gold);
+    }
 
     .hidden { display: none !important; }
+
+    /* ===== DIVIDER ===== */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-hover), transparent);
+      margin: 28px 0;
+    }
 
     /* ===== FOOTER ===== */
     footer {
       text-align: center;
-      padding: 30px 20px;
-      color: #444;
-      font-size: 12px;
+      padding: 20px;
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 540px) {
+      .hero { padding: 40px 20px 30px; }
+      .container { padding: 24px 16px 48px; }
+      .field-row { grid-template-columns: 1fr; }
+      .song-fields { grid-template-columns: 1fr; }
+      .member-row {
+        grid-template-columns: 1fr 32px;
+      }
+      .member-row input { grid-column: 1; }
+      .member-row .btn-remove-member { grid-row: 1; grid-column: 2; }
+      .hero-teams { gap: 10px; font-size: 14px; }
+      .success-view .event-reminder { flex-direction: column; gap: 4px; }
     }
   </style>
 </head>
 <body>
 
   <!-- HERO -->
-  <div class="hero">
-    <h1>🎤 SFIDA KARAOKE</h1>
-    <div class="vs-badge">
-      <span class="company">Our Films</span>
-      <span class="vs">VS</span>
-      <span class="company">Frame by Frame</span>
+  <header class="hero">
+    <div class="hero-eyebrow">Save the date &mdash; 7 Maggio 2026</div>
+    <h1>Sfida <em>Karaoke</em></h1>
+    <div class="hero-teams">
+      <span class="team-name">Our Films</span>
+      <span class="vs">vs</span>
+      <span class="team-name">Frame by Frame</span>
     </div>
-    <div class="event-info">
-      <span>📅 7 Maggio 2026</span>
-      <span>🕗 20:00 — 24:00</span>
-      <span>📍 Jackie'O, Via Boncompagni 11, Roma</span>
+    <div class="hero-details">
+      <span>Giovedi 7 Maggio</span>
+      <span class="dot"></span>
+      <span>20:00 &mdash; 24:00</span>
+      <span class="dot"></span>
+      <span>Jackie'O, Via Boncompagni 11, Roma</span>
     </div>
-  </div>
+  </header>
 
   <div class="container">
-    <!-- ALERT -->
     <div id="alert" class="alert"></div>
 
-    <!-- FORM VIEW -->
     <form id="registrationForm">
 
       <!-- Company -->
-      <div class="card">
-        <div class="card-title">🏢 La tua società</div>
-        <div class="company-selector">
-          <label class="company-option">
+      <div class="section">
+        <div class="section-label">La tua societa</div>
+        <div class="toggle-group">
+          <label class="toggle-option">
             <input type="radio" name="company" value="ourfilms" required>
-            <div class="company-label">
-              <span style="font-size: 24px;">🎬</span>
-              <span class="company-name">Our Films</span>
+            <div class="toggle-card">
+              <span class="label-text">Our Films</span>
             </div>
           </label>
-          <label class="company-option">
+          <label class="toggle-option">
             <input type="radio" name="company" value="framebyframe" required>
-            <div class="company-label">
-              <span style="font-size: 24px;">🎞️</span>
-              <span class="company-name">Frame by Frame</span>
+            <div class="toggle-card">
+              <span class="label-text">Frame by Frame</span>
             </div>
           </label>
         </div>
       </div>
 
       <!-- Type -->
-      <div class="card">
-        <div class="card-title">🎙️ Come partecipi?</div>
-        <div class="type-selector">
-          <label class="type-option">
+      <div class="section">
+        <div class="section-label">Modalita di partecipazione</div>
+        <div class="toggle-group">
+          <label class="toggle-option">
             <input type="radio" name="type" value="solista" required onchange="toggleGroupFields()">
-            <div class="type-label">🙋 Solista</div>
+            <div class="toggle-card">
+              <span class="label-icon">&#9834;</span>
+              <span class="label-text">Solista</span>
+            </div>
           </label>
-          <label class="type-option">
+          <label class="toggle-option">
             <input type="radio" name="type" value="gruppo" required onchange="toggleGroupFields()">
-            <div class="type-label">👥 Gruppo</div>
+            <div class="toggle-card">
+              <span class="label-icon">&#9835;</span>
+              <span class="label-text">Gruppo</span>
+            </div>
           </label>
         </div>
       </div>
 
+      <div class="divider"></div>
+
       <!-- Contact Info -->
-      <div class="card">
-        <div class="card-title">👤 I tuoi dati</div>
-        <div class="form-row-inline">
-          <div>
-            <label>Nome e Cognome <span class="required">*</span></label>
-            <input type="text" name="contact_name" required placeholder="Mario Rossi">
+      <div class="section">
+        <div class="section-label">I tuoi dati</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Nome <span class="req">*</span></label>
+            <input type="text" name="contact_first_name" required placeholder="Mario">
           </div>
-          <div>
-            <label>Email <span class="required">*</span></label>
-            <input type="email" name="contact_email" required placeholder="mario@example.com">
+          <div class="field">
+            <label>Cognome <span class="req">*</span></label>
+            <input type="text" name="contact_last_name" required placeholder="Rossi">
           </div>
+        </div>
+        <div class="field">
+          <label>Email <span class="req">*</span></label>
+          <input type="email" name="contact_email" required placeholder="mario.rossi@example.com">
         </div>
       </div>
 
       <!-- Group Section -->
-      <div class="card hidden" id="groupSection">
-        <div class="card-title">👥 Il tuo gruppo</div>
-        <div class="form-row">
-          <label>Nome del gruppo <span class="required">*</span></label>
+      <div class="section hidden" id="groupSection">
+        <div class="section-label">Il tuo gruppo</div>
+        <div class="field">
+          <label>Nome del gruppo <span class="req">*</span></label>
           <input type="text" name="group_name" placeholder="Es: I Microfoni d'Oro">
         </div>
-        <label style="margin-top: 12px;">Membri del gruppo (oltre a te)</label>
+        <label style="margin-top: 14px; margin-bottom: 10px;">Membri del gruppo <span style="color:var(--text-dim);">(oltre a te)</span></label>
         <div class="members-list" id="membersList">
           <div class="member-row">
-            <input type="text" placeholder="Nome e cognome" class="member-name">
-            <input type="email" placeholder="Email (opzionale)" class="member-email">
-            <button type="button" class="btn-remove" onclick="removeMember(this)">×</button>
+            <div><input type="text" placeholder="Nome" class="member-fname"></div>
+            <div><input type="text" placeholder="Cognome" class="member-lname"></div>
+            <div><input type="email" placeholder="Email (opz.)" class="member-email"></div>
+            <button type="button" class="btn-remove-member" onclick="removeMember(this)">&times;</button>
           </div>
         </div>
-        <button type="button" class="btn-add-member" onclick="addMember()">+ Aggiungi membro</button>
+        <button type="button" class="btn-add" onclick="addMember()">+ Aggiungi membro</button>
       </div>
+
+      <div class="divider"></div>
 
       <!-- Songs -->
-      <div class="card">
-        <div class="card-title">🎵 Le tue 2 canzoni</div>
-        <label>Canzone 1 <span class="required">*</span></label>
-        <div class="song-row">
-          <input type="text" name="song_1" required placeholder="Titolo canzone">
-          <input type="text" name="song_1_artist" placeholder="Artista (opzionale)">
+      <div class="section">
+        <div class="section-label">Le tue 2 canzoni</div>
+        <div class="song-group">
+          <div class="song-label">Canzone 1</div>
+          <div class="song-fields">
+            <input type="text" name="song_1" required placeholder="Titolo">
+            <input type="text" name="song_1_artist" placeholder="Artista">
+          </div>
         </div>
-        <label>Canzone 2 <span class="required">*</span></label>
-        <div class="song-row">
-          <input type="text" name="song_2" required placeholder="Titolo canzone">
-          <input type="text" name="song_2_artist" placeholder="Artista (opzionale)">
+        <div class="song-group">
+          <div class="song-label">Canzone 2</div>
+          <div class="song-fields">
+            <input type="text" name="song_2" required placeholder="Titolo">
+            <input type="text" name="song_2_artist" placeholder="Artista">
+          </div>
         </div>
       </div>
 
-      <!-- Submit -->
-      <button type="submit" class="btn-submit" id="submitBtn">🎤 Iscrivimi alla sfida!</button>
+      <button type="submit" class="btn-submit" id="submitBtn">Invia candidatura</button>
     </form>
 
     <!-- SUCCESS VIEW -->
     <div id="successView" class="success-view hidden">
-      <div class="checkmark">✅</div>
-      <h2>Iscrizione Completata!</h2>
-      <p>Riceverai una email di conferma con i dettagli. Preparati a dare spettacolo!</p>
-      <p style="margin-top: 16px; color: var(--gold);">📅 7 Maggio 2026 • 🕗 20:00 • 📍 Jackie'O</p>
+      <div class="success-icon">&#10003;</div>
+      <h2>Candidatura inviata</h2>
+      <p>Riceverai una email con l'esito della valutazione.</p>
+      <div class="event-reminder">
+        <span>7 Maggio 2026</span>
+        <span>ore 20:00</span>
+        <span>Jackie'O, Roma</span>
+      </div>
     </div>
   </div>
 
-  <footer>Sfida Karaoke 2026 — Our Films vs Frame by Frame</footer>
+  <footer>Sfida Karaoke 2026 &mdash; Our Films &amp; Frame by Frame</footer>
 
   <script>
     const form = document.getElementById('registrationForm');
@@ -446,27 +519,29 @@
     const membersList = document.getElementById('membersList');
     const successView = document.getElementById('successView');
 
-    // Get token from URL
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
 
-    // If we have a token, pre-fill from invite
     if (token) {
       fetch(`/api/register/invite/${token}`)
         .then(r => r.json())
         .then(data => {
           if (data.invite) {
             const inv = data.invite;
-            const nameInput = form.querySelector('[name="contact_name"]');
+            // Try to split name into first/last
+            const parts = (inv.name || '').trim().split(/\s+/);
+            const firstName = parts[0] || '';
+            const lastName = parts.slice(1).join(' ') || '';
+            const fnInput = form.querySelector('[name="contact_first_name"]');
+            const lnInput = form.querySelector('[name="contact_last_name"]');
             const emailInput = form.querySelector('[name="contact_email"]');
-            if (nameInput && inv.name) nameInput.value = inv.name;
+            if (fnInput && firstName) fnInput.value = firstName;
+            if (lnInput && lastName) lnInput.value = lastName;
             if (emailInput && inv.email) emailInput.value = inv.email;
-            // Pre-select company
             const companyRadio = form.querySelector(`[name="company"][value="${inv.company}"]`);
             if (companyRadio) companyRadio.checked = true;
-
             if (data.existingRegistration) {
-              showAlert('Hai già completato la registrazione! Se vuoi modificarla, contattaci via email.', 'error');
+              showAlert('Hai gia inviato una candidatura. Per modifiche, contattaci via email.', 'error');
               document.getElementById('submitBtn').disabled = true;
             }
           }
@@ -476,20 +551,17 @@
 
     function toggleGroupFields() {
       const type = form.querySelector('[name="type"]:checked')?.value;
-      if (type === 'gruppo') {
-        groupSection.classList.remove('hidden');
-      } else {
-        groupSection.classList.add('hidden');
-      }
+      groupSection.classList.toggle('hidden', type !== 'gruppo');
     }
 
     function addMember() {
       const row = document.createElement('div');
       row.className = 'member-row';
       row.innerHTML = `
-        <input type="text" placeholder="Nome e cognome" class="member-name">
-        <input type="email" placeholder="Email (opzionale)" class="member-email">
-        <button type="button" class="btn-remove" onclick="removeMember(this)">×</button>
+        <div><input type="text" placeholder="Nome" class="member-fname"></div>
+        <div><input type="text" placeholder="Cognome" class="member-lname"></div>
+        <div><input type="email" placeholder="Email (opz.)" class="member-email"></div>
+        <button type="button" class="btn-remove-member" onclick="removeMember(this)">&times;</button>
       `;
       membersList.appendChild(row);
     }
@@ -504,10 +576,7 @@
       alertEl.textContent = msg;
       alertEl.className = `alert alert-${type}`;
     }
-
-    function hideAlert() {
-      alertEl.className = 'alert';
-    }
+    function hideAlert() { alertEl.className = 'alert'; }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -521,35 +590,47 @@
       const company = form.querySelector('[name="company"]:checked')?.value;
 
       if (!company) {
-        showAlert('Seleziona la tua società', 'error');
+        showAlert('Seleziona la tua societa', 'error');
         submitBtn.disabled = false;
-        submitBtn.textContent = '🎤 Iscrivimi alla sfida!';
+        submitBtn.textContent = 'Invia candidatura';
+        return;
+      }
+      if (!type) {
+        showAlert('Seleziona la modalita di partecipazione', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Invia candidatura';
         return;
       }
 
-      // Collect members
       let members = [];
       if (type === 'gruppo') {
         const rows = membersList.querySelectorAll('.member-row');
         rows.forEach(row => {
-          const name = row.querySelector('.member-name').value.trim();
+          const fname = row.querySelector('.member-fname').value.trim();
+          const lname = row.querySelector('.member-lname').value.trim();
           const email = row.querySelector('.member-email').value.trim();
-          if (name) members.push({ name, email: email || null });
+          const fullName = [fname, lname].filter(Boolean).join(' ');
+          if (fullName) members.push({ name: fullName, first_name: fname, last_name: lname, email: email || null });
         });
         if (members.length === 0) {
           showAlert('Aggiungi almeno un membro al gruppo', 'error');
           submitBtn.disabled = false;
-          submitBtn.textContent = '🎤 Iscrivimi alla sfida!';
+          submitBtn.textContent = 'Invia candidatura';
           return;
         }
       }
+
+      const firstName = form.querySelector('[name="contact_first_name"]').value.trim();
+      const lastName = form.querySelector('[name="contact_last_name"]').value.trim();
 
       const payload = {
         token: token || null,
         company,
         type,
         group_name: form.querySelector('[name="group_name"]')?.value || null,
-        contact_name: form.querySelector('[name="contact_name"]').value,
+        contact_first_name: firstName,
+        contact_last_name: lastName,
+        contact_name: `${firstName} ${lastName}`.trim(),
         contact_email: form.querySelector('[name="contact_email"]').value,
         song_1: form.querySelector('[name="song_1"]').value,
         song_1_artist: form.querySelector('[name="song_1_artist"]').value || null,
@@ -569,18 +650,18 @@
         if (!res.ok) {
           showAlert(data.error || 'Errore durante la registrazione', 'error');
           submitBtn.disabled = false;
-          submitBtn.textContent = '🎤 Iscrivimi alla sfida!';
+          submitBtn.textContent = 'Invia candidatura';
           return;
         }
 
-        // Success!
         form.classList.add('hidden');
         successView.classList.remove('hidden');
         hideAlert();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } catch (err) {
         showAlert('Errore di connessione. Riprova.', 'error');
         submitBtn.disabled = false;
-        submitBtn.textContent = '🎤 Iscrivimi alla sfida!';
+        submitBtn.textContent = 'Invia candidatura';
       }
     });
   </script>

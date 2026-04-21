@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS registrations (
   company VARCHAR(50) NOT NULL CHECK (company IN ('ourfilms', 'framebyframe')),
   type VARCHAR(10) NOT NULL CHECK (type IN ('solista', 'gruppo')),
   group_name VARCHAR(255),
+  contact_first_name VARCHAR(255) NOT NULL,
+  contact_last_name VARCHAR(255) NOT NULL,
   contact_name VARCHAR(255) NOT NULL,
   contact_email VARCHAR(255) NOT NULL,
   song_1 VARCHAR(500) NOT NULL,

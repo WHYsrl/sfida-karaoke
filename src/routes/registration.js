@@ -32,10 +32,14 @@ router.post('/', async (req, res) => {
   try {
     const {
       token, company, type, group_name,
-      contact_name, contact_email,
+      contact_first_name, contact_last_name, contact_name, contact_email,
       song_1, song_1_artist, song_2, song_2_artist,
-      members // array of { name, email }
+      members // array of { name, first_name, last_name, email }
     } = req.body;
+
+    const firstName = (contact_first_name || '').trim();
+    const lastName = (contact_last_name || '').trim();
+    const fullName = contact_name || `${firstName} ${lastName}`.trim();
 
     // Validation
     if (!company || !['ourfilms', 'framebyframe'].includes(company)) {
@@ -44,8 +48,8 @@ router.post('/', async (req, res) => {
     if (!type || !['solista', 'gruppo'].includes(type)) {
       return res.status(400).json({ error: 'Tipo partecipazione non valido' });
     }
-    if (!contact_name || !contact_email) {
-      return res.status(400).json({ error: 'Nome e email del contatto sono obbligatori' });
+    if (!firstName || !lastName || !contact_email) {
+      return res.status(400).json({ error: 'Nome, cognome e email sono obbligatori' });
     }
     if (!song_1 || !song_2) {
       return res.status(400).json({ error: 'Devi indicare 2 canzoni' });
@@ -68,10 +72,10 @@ router.post('/', async (req, res) => {
 
     // Insert registration
     const regResult = await client.query(
-      `INSERT INTO registrations (invite_id, company, type, group_name, contact_name, contact_email, song_1, song_1_artist, song_2, song_2_artist)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO registrations (invite_id, company, type, group_name, contact_first_name, contact_last_name, contact_name, contact_email, song_1, song_1_artist, song_2, song_2_artist)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING id`,
-      [invite_id, company, type, group_name || null, contact_name, contact_email, song_1, song_1_artist || null, song_2, song_2_artist || null]
+      [invite_id, company, type, group_name || null, firstName, lastName, fullName, contact_email, song_1, song_1_artist || null, song_2, song_2_artist || null]
     );
     const registrationId = regResult.rows[0].id;
 
@@ -86,7 +90,7 @@ router.post('/', async (req, res) => {
     }
 
     await client.query('COMMIT');
-    res.status(201).json({ success: true, registrationId, message: 'Iscrizione completata! Riceverai una conferma via email.' });
+    res.status(201).json({ success: true, registrationId, message: 'Candidatura inviata! Riceverai una email con l\'esito della valutazione.' });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Registration error:', err);
