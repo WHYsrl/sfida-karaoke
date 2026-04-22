@@ -18,9 +18,9 @@
       --bg-elevated: rgba(20,20,22,0.92);
       --bg-input: rgba(27,27,31,0.95);
       --bg-card: rgba(14,14,16,0.88);
-      --text: #f0ede8;
-      --text-secondary: #b0aca3;
-      --text-dim: #7a7568;
+      --text: #ffffff;
+      --text-secondary: #ccc8c0;
+      --text-dim: #908a7e;
       --border: rgba(255,255,255,0.1);
       --border-hover: rgba(255,255,255,0.18);
       --error: #d4493f;
@@ -53,10 +53,10 @@
       inset: 0;
       background: linear-gradient(
         to bottom,
-        rgba(12,12,14,0.45) 0%,
-        rgba(12,12,14,0.7) 30%,
-        rgba(12,12,14,0.88) 60%,
-        rgba(12,12,14,0.95) 100%
+        rgba(12,12,14,0.25) 0%,
+        rgba(12,12,14,0.45) 30%,
+        rgba(12,12,14,0.72) 60%,
+        rgba(12,12,14,0.88) 100%
       );
       pointer-events: none;
       z-index: 0;
@@ -178,7 +178,7 @@
       display: block;
       font-size: 13px;
       font-weight: 500;
-      color: var(--text-secondary);
+      color: #ddd9d0;
       margin-bottom: 6px;
     }
     label .req { color: var(--gold); font-weight: 400; }
@@ -186,8 +186,8 @@
     input, select, textarea {
       width: 100%;
       padding: 11px 14px;
-      background: rgba(15,15,18,0.9);
-      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(30,30,36,0.9);
+      border: 1px solid rgba(255,255,255,0.15);
       border-radius: var(--radius);
       color: var(--text);
       font-family: inherit;
@@ -198,7 +198,7 @@
     input:focus, select:focus, textarea:focus {
       border-color: rgba(201,168,76,0.5);
       box-shadow: 0 0 0 3px rgba(201,168,76,0.12);
-      background: rgba(15,15,18,0.95);
+      background: rgba(35,35,42,0.95);
     }
     input::placeholder, textarea::placeholder { color: var(--text-dim); }
     select {
@@ -232,13 +232,13 @@
       justify-content: center;
       gap: 10px;
       padding: 14px 16px;
-      background: rgba(15,15,18,0.85);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(30,30,36,0.85);
+      border: 1px solid rgba(255,255,255,0.13);
       border-radius: var(--radius);
       transition: all var(--transition);
       text-align: center;
     }
-    .toggle-card:hover { border-color: rgba(255,255,255,0.2); }
+    .toggle-card:hover { border-color: rgba(255,255,255,0.25); }
     .toggle-option input:checked + .toggle-card {
       border-color: var(--gold);
       background: rgba(201,168,76,0.12);
@@ -272,8 +272,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(15,15,18,0.7);
+      border: 1px solid rgba(255,255,255,0.13);
+      background: rgba(30,30,36,0.7);
       color: var(--text-dim);
       border-radius: var(--radius);
       cursor: pointer;
@@ -286,8 +286,8 @@
       width: 100%;
       padding: 10px;
       margin-top: 8px;
-      background: rgba(15,15,18,0.5);
-      border: 1px dashed rgba(255,255,255,0.15);
+      background: rgba(30,30,36,0.5);
+      border: 1px dashed rgba(255,255,255,0.2);
       color: var(--text-secondary);
       border-radius: var(--radius);
       cursor: pointer;
@@ -296,6 +296,66 @@
       transition: all var(--transition);
     }
     .btn-add:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ===== EMAIL COMPOUND FIELD ===== */
+    .email-compound {
+      display: flex;
+      align-items: center;
+      background: rgba(30,30,36,0.9);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .email-compound:focus-within {
+      border-color: rgba(201,168,76,0.5);
+      box-shadow: 0 0 0 3px rgba(201,168,76,0.12);
+    }
+    .email-compound input {
+      border: none !important;
+      background: transparent !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      flex: 1;
+      min-width: 0;
+    }
+    .email-compound input:focus { box-shadow: none !important; }
+    .email-domain {
+      padding: 11px 14px;
+      color: var(--gold);
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      background: rgba(201,168,76,0.08);
+      border-left: 1px solid rgba(255,255,255,0.08);
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    /* ===== SONG DUPLICATE WARNING ===== */
+    .song-warning {
+      margin-top: 6px;
+      padding: 8px 12px;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 6px;
+      font-size: 12px;
+      color: #f5c842;
+      line-height: 1.5;
+    }
+    .song-warning .sw-msg { margin-bottom: 6px; }
+    .song-warning .sw-actions { display: flex; gap: 6px; }
+    .song-warning .sw-btn {
+      padding: 4px 12px;
+      border-radius: 4px;
+      border: none;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .song-warning .sw-btn-change { background: rgba(245,158,11,0.2); color: #f5c842; border: 1px solid rgba(245,158,11,0.3); }
+    .song-warning .sw-btn-keep { background: rgba(255,255,255,0.06); color: var(--text-secondary); border: 1px solid rgba(255,255,255,0.1); }
 
     /* ===== SONGS ===== */
     .song-group { margin-bottom: 14px; }
@@ -600,8 +660,12 @@
           </div>
         </div>
         <div class="field">
-          <label>Email <span class="req">*</span></label>
-          <input type="email" name="contact_email" required placeholder="mario.rossi@example.com">
+          <label>Email aziendale <span class="req">*</span></label>
+          <div class="email-compound">
+            <input type="text" name="contact_email_local" id="emailLocal" required placeholder="mario.rossi">
+            <div class="email-domain" id="emailDomain">@ourfilms.it</div>
+          </div>
+          <input type="hidden" name="contact_email" id="contactEmailFull">
         </div>
       </div>
 
@@ -632,16 +696,18 @@
         <div class="song-group">
           <div class="song-label">Canzone 1</div>
           <div class="song-fields">
-            <input type="text" name="song_1" required placeholder="Titolo">
+            <input type="text" name="song_1" required placeholder="Titolo" onblur="checkSongDuplicate(this, 1)">
             <input type="text" name="song_1_artist" placeholder="Artista">
           </div>
+          <div id="songWarn1"></div>
         </div>
         <div class="song-group">
           <div class="song-label">Canzone 2</div>
           <div class="song-fields">
-            <input type="text" name="song_2" required placeholder="Titolo">
+            <input type="text" name="song_2" required placeholder="Titolo" onblur="checkSongDuplicate(this, 2)">
             <input type="text" name="song_2_artist" placeholder="Artista">
           </div>
+          <div id="songWarn2"></div>
         </div>
       </div>
 
@@ -692,9 +758,9 @@
             const parts = (inv.name || '').trim().split(/\s+/);
             setField('contact_first_name', parts[0] || '');
             setField('contact_last_name', parts.slice(1).join(' ') || '');
-            setField('contact_email', inv.email || '');
             const radio = form.querySelector(`[name="company"][value="${inv.company}"]`);
-            if (radio) radio.checked = true;
+            if (radio) { radio.checked = true; updateEmailDomain(); }
+            if (inv.email) { setEmailFromFull(inv.email); }
           }
         })
         .catch(() => {});
@@ -703,6 +769,17 @@
     function setField(name, value) {
       const el = form.querySelector(`[name="${name}"]`);
       if (el) el.value = value;
+    }
+
+    function setEmailFromFull(fullEmail) {
+      if (!fullEmail) return;
+      const atIdx = fullEmail.indexOf('@');
+      if (atIdx > -1) {
+        emailLocal.value = fullEmail.substring(0, atIdx);
+      } else {
+        emailLocal.value = fullEmail;
+      }
+      syncFullEmail();
     }
 
     function toggleGroupFields() {
@@ -733,14 +810,35 @@
     }
     function hideAlert() { alertEl.className = 'alert'; alertEl.innerHTML = ''; }
 
+    // ===== EMAIL DOMAIN SYNC =====
+    const emailLocal = document.getElementById('emailLocal');
+    const emailDomain = document.getElementById('emailDomain');
+    const contactEmailFull = document.getElementById('contactEmailFull');
+    const domainMap = { ourfilms: '@ourfilms.it', framebyframe: '@frame.it' };
+
+    function updateEmailDomain() {
+      const company = form.querySelector('[name="company"]:checked')?.value || 'ourfilms';
+      emailDomain.textContent = domainMap[company] || '@ourfilms.it';
+      syncFullEmail();
+    }
+    function syncFullEmail() {
+      const local = emailLocal.value.trim().replace(/@.*$/, '');
+      const domain = emailDomain.textContent;
+      contactEmailFull.value = local ? local + domain : '';
+    }
+
+    // Listen for company change
+    form.querySelectorAll('[name="company"]').forEach(r => r.addEventListener('change', updateEmailDomain));
+    emailLocal.addEventListener('input', syncFullEmail);
+
     // ===== EMAIL CHECK (on blur) =====
-    const emailInput = form.querySelector('[name="contact_email"]');
     let emailChecked = false;
     let emailConflict = null;
 
-    emailInput.addEventListener('blur', async () => {
-      const email = emailInput.value.trim();
-      if (!email || !email.includes('@')) return;
+    emailLocal.addEventListener('blur', async () => {
+      syncFullEmail();
+      const email = contactEmailFull.value.trim();
+      if (!email) return;
 
       try {
         const res = await fetch('/api/register/check-email', {
@@ -771,7 +869,8 @@
 
     // ===== OTP FLOW =====
     async function startOtpFlow() {
-      otpEmail = emailInput.value.trim();
+      syncFullEmail();
+      otpEmail = contactEmailFull.value.trim();
       hideAlert();
       await requestOtp();
       form.classList.add('hidden');
@@ -833,6 +932,39 @@
       otpEmail = null;
     }
 
+    // ===== SONG DUPLICATE CHECK =====
+    const songDupAccepted = { 1: false, 2: false };
+
+    async function checkSongDuplicate(input, num) {
+      const song = input.value.trim();
+      const warnEl = document.getElementById(`songWarn${num}`);
+      warnEl.innerHTML = '';
+      songDupAccepted[num] = false;
+
+      if (!song) return;
+
+      try {
+        const res = await fetch('/api/register/check-song', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ song }),
+        });
+        const data = await res.json();
+        if (data.duplicate && data.matches.length > 0) {
+          const who = data.matches.map(m => `<strong>${m.name}</strong> (${m.company})`).join(', ');
+          warnEl.innerHTML = `
+            <div class="song-warning">
+              <div class="sw-msg">Questa canzone è già stata scelta da: ${who}. Ti consigliamo di sceglierne un'altra per evitare doppioni.</div>
+              <div class="sw-actions">
+                <button type="button" class="sw-btn sw-btn-change" onclick="document.querySelector('[name=song_${num}]').value='';document.querySelector('[name=song_${num}]').focus();document.getElementById('songWarn${num}').innerHTML='';">Cambio canzone</button>
+                <button type="button" class="sw-btn sw-btn-keep" onclick="songDupAccepted[${num}]=true;document.getElementById('songWarn${num}').innerHTML='<div style=\\'font-size:11px;color:var(--text-dim);margin-top:4px;\\'>Duplicato accettato</div>';">Inserisci comunque</button>
+              </div>
+            </div>
+          `;
+        }
+      } catch (e) { /* silent */ }
+    }
+
     function enterEditMode(reg) {
       editMode = true;
       editRegistrationId = reg.id;
@@ -846,7 +978,7 @@
 
       // Populate fields
       const radio = form.querySelector(`[name="company"][value="${reg.company}"]`);
-      if (radio) radio.checked = true;
+      if (radio) { radio.checked = true; updateEmailDomain(); }
 
       const typeRadio = form.querySelector(`[name="type"][value="${reg.type}"]`);
       if (typeRadio) { typeRadio.checked = true; toggleGroupFields(); }
@@ -856,7 +988,7 @@
       const ln = reg.contact_last_name || (reg.contact_name || '').split(' ').slice(1).join(' ') || '';
       setField('contact_first_name', fn);
       setField('contact_last_name', ln);
-      setField('contact_email', reg.contact_email);
+      setEmailFromFull(reg.contact_email);
       setField('group_name', reg.group_name || '');
       setField('song_1', reg.song_1);
       setField('song_1_artist', reg.song_1_artist || '');
@@ -928,7 +1060,7 @@
         contact_first_name: firstName,
         contact_last_name: lastName,
         contact_name: `${firstName} ${lastName}`.trim(),
-        contact_email: form.querySelector('[name="contact_email"]').value,
+        contact_email: contactEmailFull.value,
         song_1: form.querySelector('[name="song_1"]').value,
         song_1_artist: form.querySelector('[name="song_1_artist"]').value || null,
         song_2: form.querySelector('[name="song_2"]').value,

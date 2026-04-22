@@ -89,6 +89,37 @@ router.post('/check-email', async (req, res) => {
   }
 });
 
+// ========== CHECK SONG DUPLICATE ==========
+router.post('/check-song', async (req, res) => {
+  try {
+    const song = (req.body.song || '').trim().toLowerCase();
+    if (!song) return res.json({ duplicate: false });
+
+    const { rows } = await pool.query(`
+      SELECT r.contact_name, r.group_name, r.type, r.company,
+        CASE WHEN LOWER(TRIM(r.song_1)) = $1 THEN 1 ELSE 2 END as song_num
+      FROM registrations r
+      WHERE LOWER(TRIM(r.song_1)) = $1 OR LOWER(TRIM(r.song_2)) = $1
+    `, [song]);
+
+    if (rows.length > 0) {
+      return res.json({
+        duplicate: true,
+        matches: rows.map(r => ({
+          name: r.type === 'gruppo' ? r.group_name : r.contact_name,
+          company: r.company === 'ourfilms' ? 'Our Films' : 'Frame by Frame',
+          type: r.type,
+        }))
+      });
+    }
+
+    res.json({ duplicate: false });
+  } catch (err) {
+    console.error('Check song error:', err);
+    res.json({ duplicate: false });
+  }
+});
+
 // ========== REQUEST OTP to edit existing candidacy ==========
 router.post('/request-otp', async (req, res) => {
   try {
