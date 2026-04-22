@@ -221,7 +221,7 @@
     /* ===== TOGGLE CARDS (Company / Type) ===== */
     .toggle-group {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 10px;
     }
     .toggle-option { position: relative; cursor: pointer; }
@@ -628,17 +628,24 @@
         <div class="section-label">Modalita di partecipazione</div>
         <div class="toggle-group">
           <label class="toggle-option">
-            <input type="radio" name="type" value="solista" required onchange="toggleGroupFields()">
+            <input type="radio" name="type" value="solista" required onchange="toggleTypeFields()">
             <div class="toggle-card">
               <span class="label-icon">&#9834;</span>
               <span class="label-text">Solista</span>
             </div>
           </label>
           <label class="toggle-option">
-            <input type="radio" name="type" value="gruppo" required onchange="toggleGroupFields()">
+            <input type="radio" name="type" value="gruppo" required onchange="toggleTypeFields()">
             <div class="toggle-card">
               <span class="label-icon">&#9835;</span>
               <span class="label-text">Gruppo</span>
+            </div>
+          </label>
+          <label class="toggle-option">
+            <input type="radio" name="type" value="pubblico" required onchange="toggleTypeFields()">
+            <div class="toggle-card">
+              <span class="label-icon">&#128079;</span>
+              <span class="label-text">Pubblico</span>
             </div>
           </label>
         </div>
@@ -688,15 +695,15 @@
         <button type="button" class="btn-add" onclick="addMember()">+ Aggiungi membro</button>
       </div>
 
-      <div class="divider"></div>
+      <div class="divider" id="songsDivider"></div>
 
-      <!-- Songs -->
-      <div class="section">
+      <!-- Songs (hidden for pubblico) -->
+      <div class="section" id="songsSection">
         <div class="section-label">Le tue 2 canzoni</div>
         <div class="song-group">
           <div class="song-label">Canzone 1</div>
           <div class="song-fields">
-            <input type="text" name="song_1" required placeholder="Titolo" onblur="checkSongDuplicate(this, 1)">
+            <input type="text" name="song_1" placeholder="Titolo" onblur="checkSongDuplicate(this, 1)">
             <input type="text" name="song_1_artist" placeholder="Artista">
           </div>
           <div id="songWarn1"></div>
@@ -704,7 +711,7 @@
         <div class="song-group">
           <div class="song-label">Canzone 2</div>
           <div class="song-fields">
-            <input type="text" name="song_2" required placeholder="Titolo" onblur="checkSongDuplicate(this, 2)">
+            <input type="text" name="song_2" placeholder="Titolo" onblur="checkSongDuplicate(this, 2)">
             <input type="text" name="song_2_artist" placeholder="Artista">
           </div>
           <div id="songWarn2"></div>
@@ -782,9 +789,18 @@
       syncFullEmail();
     }
 
-    function toggleGroupFields() {
+    function toggleGroupFields() { toggleTypeFields(); }
+    function toggleTypeFields() {
       const type = form.querySelector('[name="type"]:checked')?.value;
       groupSection.classList.toggle('hidden', type !== 'gruppo');
+      const songsSection = document.getElementById('songsSection');
+      const songsDivider = document.getElementById('songsDivider');
+      const isPubblico = type === 'pubblico';
+      songsSection.classList.toggle('hidden', isPubblico);
+      songsDivider.classList.toggle('hidden', isPubblico);
+      // Toggle required on song fields
+      form.querySelector('[name="song_1"]').required = !isPubblico;
+      form.querySelector('[name="song_2"]').required = !isPubblico;
     }
 
     function addMember() {
@@ -1061,10 +1077,10 @@
         contact_last_name: lastName,
         contact_name: `${firstName} ${lastName}`.trim(),
         contact_email: contactEmailFull.value,
-        song_1: form.querySelector('[name="song_1"]').value,
-        song_1_artist: form.querySelector('[name="song_1_artist"]').value || null,
-        song_2: form.querySelector('[name="song_2"]').value,
-        song_2_artist: form.querySelector('[name="song_2_artist"]').value || null,
+        song_1: type !== 'pubblico' ? form.querySelector('[name="song_1"]').value : null,
+        song_1_artist: type !== 'pubblico' ? (form.querySelector('[name="song_1_artist"]').value || null) : null,
+        song_2: type !== 'pubblico' ? form.querySelector('[name="song_2"]').value : null,
+        song_2_artist: type !== 'pubblico' ? (form.querySelector('[name="song_2_artist"]').value || null) : null,
         members,
       };
 

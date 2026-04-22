@@ -308,13 +308,13 @@ router.post('/', async (req, res) => {
     if (!company || !['ourfilms', 'framebyframe'].includes(company)) {
       return res.status(400).json({ error: 'Societa non valida' });
     }
-    if (!type || !['solista', 'gruppo'].includes(type)) {
+    if (!type || !['solista', 'gruppo', 'pubblico'].includes(type)) {
       return res.status(400).json({ error: 'Tipo partecipazione non valido' });
     }
     if (!firstName || !lastName || !contact_email) {
       return res.status(400).json({ error: 'Nome, cognome e email sono obbligatori' });
     }
-    if (!song_1 || !song_2) {
+    if (type !== 'pubblico' && (!song_1 || !song_2)) {
       return res.status(400).json({ error: 'Devi indicare 2 canzoni' });
     }
     if (type === 'gruppo' && (!members || members.length === 0)) {
@@ -364,14 +364,16 @@ router.post('/', async (req, res) => {
       const resend = getResend();
       if (resend) {
         const companyLabel = company === 'ourfilms' ? 'Our Films' : 'Frame by Frame';
-        const participant = type === 'gruppo' ? `gruppo "${group_name}"` : fullName;
+        const participant = type === 'gruppo' ? `gruppo "${group_name}"` : (type === 'pubblico' ? 'pubblico' : fullName);
 
-        // Email to the contact/soloist
+        // Email to the contact/soloist/pubblico
         await resend.emails.send({
           from: process.env.RESEND_FROM_EMAIL || 'Sfida Karaoke <karaoke@yourdomain.com>',
           to: [contact_email],
-          subject: '🎤 Candidatura Ricevuta — Sfida Karaoke',
-          html: buildConfirmationEmail(fullName, participant, companyLabel, song_1, song_1_artist, song_2, song_2_artist, type === 'gruppo' ? members : null),
+          subject: type === 'pubblico' ? '🎤 Registrazione Confermata — Sfida Karaoke' : '🎤 Candidatura Ricevuta — Sfida Karaoke',
+          html: type === 'pubblico'
+            ? buildPubblicoConfirmationEmail(fullName, companyLabel)
+            : buildConfirmationEmail(fullName, participant, companyLabel, song_1, song_1_artist, song_2, song_2_artist, type === 'gruppo' ? members : null),
         });
 
         // If group, email each member who has an email
@@ -466,6 +468,32 @@ function buildMemberConfirmationEmail(memberName, groupName, contactName, compan
         <p style="color:#c9a84c;margin:6px 0 0;">🎵 ${song2}${song2Artist ? ` — ${song2Artist}` : ''}</p>
       </div>
       <p style="color:#ccc;line-height:1.6;">La candidatura sarà valutata dal team organizzativo. Riceverete una comunicazione con l'esito.</p>
+      <div style="background:#1a1a1a;padding:16px;border-radius:8px;margin:16px 0;">
+        <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">📅 Giovedì 7 Maggio 2026</p>
+        <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">🕗 Ore 20:00 — 24:00</p>
+        <p style="color:#c9a84c;margin:0;font-weight:600;">📍 Jackie'O — Via Boncompagni 11, Roma</p>
+      </div>
+    </div>
+    <div style="padding:16px;text-align:center;border-top:1px solid #222;">
+      <p style="color:#666;font-size:12px;margin:0;">Sfida Karaoke 2026 — Jackie'O, Via Boncompagni 11, Roma</p>
+    </div>
+  </div>`;
+}
+
+// ========== EMAIL TEMPLATE: Confirmation for pubblico ==========
+function buildPubblicoConfirmationEmail(name, companyLabel) {
+  return `
+  <div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:600px;margin:0 auto;background:#0c0c0e;color:#e8e6e1;border-radius:12px;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#b8860b,#c9a84c,#b8860b);padding:28px;text-align:center;">
+      <h1 style="margin:0;font-size:22px;color:#0c0c0e;font-weight:700;">🎤 SFIDA KARAOKE</h1>
+      <p style="margin:6px 0 0;color:#0c0c0e;font-size:14px;">Our Films vs Frame by Frame</p>
+    </div>
+    <div style="padding:28px;">
+      <div style="background:rgba(34,197,94,0.1);border-left:4px solid #22c55e;padding:14px;border-radius:0 8px 8px 0;margin-bottom:20px;">
+        <h2 style="margin:0;color:#22c55e;font-size:18px;">Registrazione Confermata!</h2>
+      </div>
+      <p style="color:#ccc;line-height:1.6;">Ciao <strong style="color:#c9a84c;">${name}</strong>,</p>
+      <p style="color:#ccc;line-height:1.6;">La tua registrazione come <strong>pubblico</strong> per il team <strong style="color:#c9a84c;">${companyLabel}</strong> è confermata. Ti aspettiamo per tifare e divertirti!</p>
       <div style="background:#1a1a1a;padding:16px;border-radius:8px;margin:16px 0;">
         <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">📅 Giovedì 7 Maggio 2026</p>
         <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">🕗 Ore 20:00 — 24:00</p>
