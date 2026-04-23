@@ -344,7 +344,7 @@ router.post('/', async (req, res) => {
       `INSERT INTO registrations (invite_id, company, type, group_name, contact_first_name, contact_last_name, contact_name, contact_email, song_1, song_1_artist, song_2, song_2_artist)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING id`,
-      [invite_id, company, type, group_name || null, firstName, lastName, fullName, contact_email, song_1, song_1_artist || null, song_2, song_2_artist || null]
+      [invite_id, company, type, group_name || null, firstName, lastName, fullName, contact_email, song_1 || null, song_1_artist || null, song_2 || null, song_2_artist || null]
     );
     const registrationId = regResult.rows[0].id;
 

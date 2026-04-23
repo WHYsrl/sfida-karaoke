@@ -78,6 +78,11 @@ async function startServer() {
   try {
     await pool.query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS contact_first_name VARCHAR(255)`);
     await pool.query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS contact_last_name VARCHAR(255)`);
+    // Allow 'pubblico' type and nullable songs
+    await pool.query(`ALTER TABLE registrations DROP CONSTRAINT IF EXISTS registrations_type_check`);
+    await pool.query(`ALTER TABLE registrations ADD CONSTRAINT registrations_type_check CHECK (type IN ('solista', 'gruppo', 'pubblico'))`);
+    await pool.query(`ALTER TABLE registrations ALTER COLUMN song_1 DROP NOT NULL`);
+    await pool.query(`ALTER TABLE registrations ALTER COLUMN song_2 DROP NOT NULL`);
     await pool.query(`CREATE TABLE IF NOT EXISTS otp_codes (
       id SERIAL PRIMARY KEY,
       email VARCHAR(255) NOT NULL,
