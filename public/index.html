@@ -118,6 +118,7 @@
       object-fit: contain;
       opacity: 1;
     }
+    .hero-teams .logo-ourfilms { height: 38px; }
     .hero-teams .vs {
       font-family: 'Playfair Display', serif;
       font-style: italic;
@@ -259,6 +260,7 @@
       opacity: 0.85;
     }
     .toggle-option input:checked + .toggle-card .company-logo { opacity: 1; }
+    .toggle-card .logo-ourfilms { height: 16px; }
 
     /* ===== GROUP MEMBERS ===== */
     .members-list { display: flex; flex-direction: column; gap: 10px; }
@@ -578,7 +580,7 @@
     <div class="hero-eyebrow">Save the date &mdash; 7 Maggio 2026</div>
     <h1>Sfida <em>Karaoke</em></h1>
     <div class="hero-teams">
-      <img src="/img/ourfilms.png" alt="Our Films" class="team-logo">
+      <img src="/img/ourfilms.png" alt="Our Films" class="team-logo logo-ourfilms">
       <span class="vs">vs</span>
       <img src="/img/framebyframe.png" alt="Frame by Frame" class="team-logo">
     </div>
@@ -622,7 +624,7 @@
           <label class="toggle-option">
             <input type="radio" name="company" value="ourfilms" required>
             <div class="toggle-card">
-              <img src="/img/ourfilms.png" alt="Our Films" class="company-logo">
+              <img src="/img/ourfilms.png" alt="Our Films" class="company-logo logo-ourfilms">
             </div>
           </label>
           <label class="toggle-option">
