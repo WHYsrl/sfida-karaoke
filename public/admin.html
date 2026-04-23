@@ -377,7 +377,7 @@
         <thead>
           <tr>
             <th>Società</th><th>Tipo</th><th>Nome / Gruppo</th><th>Email</th>
-            <th>Stato</th><th>Data</th>
+            <th>Stato</th><th>Data</th><th>Azioni</th>
           </tr>
         </thead>
         <tbody id="regTableBody"></tbody>
@@ -390,20 +390,34 @@
     <div class="table-header">
       <h2>👥 Tutti i Partecipanti</h2>
       <div class="filters">
-        <input type="text" class="search-input" id="participantSearch" placeholder="Cerca nome..." oninput="filterParticipants()">
+        <input type="text" class="search-input" id="participantSearch" placeholder="Cerca nome, email, gruppo..." oninput="filterParticipants()">
         <select id="filterParticipantCompany" onchange="loadParticipants()">
           <option value="">Tutte le societa</option>
           <option value="ourfilms">Our Films</option>
           <option value="framebyframe">Frame by Frame</option>
         </select>
+        <select id="filterParticipantRole" onchange="filterParticipants()">
+          <option value="">Tutti i ruoli</option>
+          <option value="solista">Solisti</option>
+          <option value="capogruppo">Capogruppo</option>
+          <option value="membro">Membri</option>
+          <option value="pubblico">Pubblico</option>
+        </select>
+        <select id="filterParticipantStatus" onchange="filterParticipants()">
+          <option value="">Tutti gli stati</option>
+          <option value="pending">In attesa</option>
+          <option value="accepted">Accettati</option>
+          <option value="revision">Revisione</option>
+          <option value="rejected">Rifiutati</option>
+        </select>
       </div>
     </div>
-    <div style="margin-bottom: 12px; font-size: 13px; color: var(--text-muted);" id="participantCount"></div>
+    <div class="reg-counters" id="participantCounters"></div>
     <div class="scroll-x">
       <table>
         <thead>
           <tr>
-            <th>Nome</th><th>Email</th><th>Societa</th><th>Ruolo</th><th>Gruppo</th><th>Stato</th>
+            <th>Nome</th><th>Email</th><th>Societa</th><th>Ruolo</th><th>Gruppo</th><th>Stato</th><th>Azioni</th>
           </tr>
         </thead>
         <tbody id="participantsTableBody"></tbody>
@@ -656,9 +670,17 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
         <td style="font-size:12px;">${r.contact_email}</td>
         <td><span class="badge badge-${r.status}">${statusLabel(r.status)}</span></td>
         <td style="font-size:12px;color:var(--text-muted);">${new Date(r.created_at).toLocaleDateString('it-IT')}</td>
+        <td onclick="event.stopPropagation();">
+          <div class="action-btns">
+            ${r.status !== 'accepted' ? `<button class="action-btn accept" onclick="openStatusModal(${r.id},'accepted','${esc(r.contact_name)}')">✅</button>` : ''}
+            ${r.status !== 'revision' ? `<button class="action-btn revise" onclick="openStatusModal(${r.id},'revision','${esc(r.contact_name)}')">📝</button>` : ''}
+            ${r.status !== 'rejected' ? `<button class="action-btn reject" onclick="openStatusModal(${r.id},'rejected','${esc(r.contact_name)}')">❌</button>` : ''}
+            <button class="action-btn" style="color:var(--error);" onclick="confirmDeleteReg(${r.id},'${esc(r.type === 'gruppo' ? r.group_name : r.contact_name)}')">🗑</button>
+          </div>
+        </td>
       </tr>
       <tr class="reg-detail" id="detail-${r.id}">
-        <td colspan="6">
+        <td colspan="7">
           <div class="detail-panel">
             <div class="detail-section">
               <h4>Dati Personali</h4>
@@ -874,6 +896,7 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     if (res.ok) {
       closeModal();
       loadRegistrations();
+      loadParticipants();
       loadDashboard();
     } else {
       alert('Errore nell\'aggiornamento');
@@ -925,16 +948,23 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     const company = document.getElementById('filterParticipantCompany').value;
     const params = company ? `?company=${company}` : '';
     allParticipants = await api(`/participants${params}`);
-    renderParticipants(allParticipants);
+    filterParticipants();
   }
 
   function filterParticipants() {
-    const q = document.getElementById('participantSearch').value.toLowerCase();
-    const filtered = q ? allParticipants.filter(p =>
-      p.name.toLowerCase().includes(q) ||
-      (p.email && p.email.toLowerCase().includes(q)) ||
-      (p.group_name && p.group_name.toLowerCase().includes(q))
-    ) : allParticipants;
+    const q = (document.getElementById('participantSearch').value || '').toLowerCase();
+    const roleFilter = document.getElementById('filterParticipantRole').value;
+    const statusFilter = document.getElementById('filterParticipantStatus').value;
+    let filtered = allParticipants;
+    if (q) {
+      filtered = filtered.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        (p.email && p.email.toLowerCase().includes(q)) ||
+        (p.group_name && p.group_name.toLowerCase().includes(q))
+      );
+    }
+    if (roleFilter) filtered = filtered.filter(p => p.role === roleFilter);
+    if (statusFilter) filtered = filtered.filter(p => p.status === statusFilter);
     renderParticipants(filtered);
   }
 
@@ -942,12 +972,25 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     const total = data.length;
     const ofCount = data.filter(p => p.company === 'ourfilms').length;
     const fbfCount = data.filter(p => p.company === 'framebyframe').length;
-    document.getElementById('participantCount').innerHTML =
-      `<strong>${total}</strong> partecipanti totali — Our Films: <strong>${ofCount}</strong> · Frame by Frame: <strong>${fbfCount}</strong>`;
+    const solistiCount = data.filter(p => p.role === 'solista').length;
+    const gruppiCount = data.filter(p => p.role === 'capogruppo' || p.role === 'membro').length;
+    const pubblCount = data.filter(p => p.role === 'pubblico').length;
+    const cantantiCount = solistiCount + gruppiCount;
+
+    document.getElementById('participantCounters').innerHTML = `
+      <div class="reg-counter">Totale: <strong>${total}</strong></div>
+      <div class="reg-counter">Our Films: <strong>${ofCount}</strong></div>
+      <div class="reg-counter">Frame by Frame: <strong>${fbfCount}</strong></div>
+      <div class="reg-counter">Solisti: <strong>${solistiCount}</strong></div>
+      <div class="reg-counter">In gruppi: <strong>${gruppiCount}</strong></div>
+      <div class="reg-counter">Pubblico: <strong>${pubblCount}</strong></div>
+      <div class="reg-counter" style="border-color:var(--gold);">Cantanti totali: <strong style="color:var(--gold);">${cantantiCount}</strong></div>
+    `;
 
     document.getElementById('participantsTableBody').innerHTML = data.map(p => {
-      const roleLabel = { solista: 'Solista', capogruppo: 'Capogruppo', membro: 'Membro' }[p.role];
-      const roleBadge = { solista: 'solista', capogruppo: 'capogruppo', membro: 'membro' }[p.role];
+      const roleLabel = { solista: 'Solista', capogruppo: 'Capogruppo', membro: 'Membro', pubblico: 'Pubblico' }[p.role] || p.role;
+      const roleBadge = p.role;
+      const isMain = p.role !== 'membro'; // solista, capogruppo, pubblico can be acted on
       return `
         <tr>
           <td><strong>${p.name}</strong></td>
@@ -956,6 +999,14 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
           <td><span class="badge badge-${roleBadge}">${roleLabel}</span></td>
           <td>${p.group_name ? `<span style="color:var(--gold)">${p.group_name}</span>` : '—'}</td>
           <td><span class="badge badge-${p.status}">${statusLabel(p.status)}</span></td>
+          <td>
+            ${isMain ? `<div class="action-btns">
+              ${p.status !== 'accepted' ? `<button class="action-btn accept" onclick="openStatusModal(${p.registration_id},'accepted','${esc(p.name)}')">✅</button>` : ''}
+              ${p.status !== 'revision' ? `<button class="action-btn revise" onclick="openStatusModal(${p.registration_id},'revision','${esc(p.name)}')">📝</button>` : ''}
+              ${p.status !== 'rejected' ? `<button class="action-btn reject" onclick="openStatusModal(${p.registration_id},'rejected','${esc(p.name)}')">❌</button>` : ''}
+              <button class="action-btn" style="color:var(--error);" onclick="confirmDeleteReg(${p.registration_id},'${esc(p.name)}')">🗑</button>
+            </div>` : '<span style="color:var(--text-muted);font-size:11px;">—</span>'}
+          </td>
         </tr>
       `;
     }).join('');

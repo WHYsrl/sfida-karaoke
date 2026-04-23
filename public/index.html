@@ -556,8 +556,17 @@
       }
       .member-row input { grid-column: 1; }
       .member-row .btn-remove-member { grid-row: 1; grid-column: 2; }
+      .toggle-group { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+      .toggle-card { padding: 12px 8px; }
+      .toggle-card .label-text { font-size: 12px; }
+      .toggle-card .label-icon { font-size: 14px; }
       .hero-teams { gap: 10px; font-size: 14px; }
+      .hero-teams .team-logo { height: 36px; }
+      .hero-details { font-size: 13px; gap: 6px 14px; }
       .success-view .event-reminder { flex-direction: column; gap: 4px; }
+    }
+    @media (max-width: 380px) {
+      .toggle-group { grid-template-columns: 1fr; }
     }
   </style>
 </head>

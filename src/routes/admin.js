@@ -333,6 +333,24 @@ router.get('/participants', async (req, res) => {
           r.created_at
         FROM group_members gm
         JOIN registrations r ON r.id = gm.registration_id
+
+        UNION ALL
+
+        -- Pubblico
+        SELECT
+          r.id as registration_id,
+          r.contact_name as name,
+          COALESCE(r.contact_first_name, '') as first_name,
+          COALESCE(r.contact_last_name, '') as last_name,
+          r.contact_email as email,
+          r.company,
+          'pubblico' as role,
+          NULL as group_name,
+          r.status,
+          r.song_1, r.song_1_artist, r.song_2, r.song_2_artist,
+          r.created_at
+        FROM registrations r
+        WHERE r.type = 'pubblico'
       ) sub
       ${companyFilter}
       ORDER BY sub.company, sub.group_name NULLS FIRST, sub.role, sub.name
