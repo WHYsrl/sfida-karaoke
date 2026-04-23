@@ -909,10 +909,10 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     const rows = [];
     songs.forEach(s => {
       const who = s.type === 'gruppo' ? s.group_name : s.contact_name;
-      rows.push({ song: s.song_1, artist: s.song_1_artist, who, company: s.company, type: s.type, num: 1 });
-      rows.push({ song: s.song_2, artist: s.song_2_artist, who, company: s.company, type: s.type, num: 2 });
+      if (s.song_1) rows.push({ song: s.song_1, artist: s.song_1_artist, who, company: s.company, type: s.type, num: 1 });
+      if (s.song_2) rows.push({ song: s.song_2, artist: s.song_2_artist, who, company: s.company, type: s.type, num: 2 });
     });
-    rows.sort((a, b) => a.song.localeCompare(b.song));
+    rows.sort((a, b) => (a.song || '').localeCompare(b.song || ''));
     document.getElementById('songsTableBody').innerHTML = rows.map(r => `
       <tr>
         <td><strong>${r.song}</strong></td>

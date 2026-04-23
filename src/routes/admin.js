@@ -120,9 +120,9 @@ router.get('/duplicate-songs', async (req, res) => {
   try {
     const { rows } = await pool.query(`
       WITH all_songs AS (
-        SELECT id, company, contact_name, group_name, type, LOWER(TRIM(song_1)) as song, song_1_artist as artist, 1 as song_num FROM registrations
+        SELECT id, company, contact_name, group_name, type, LOWER(TRIM(song_1)) as song, song_1_artist as artist, 1 as song_num FROM registrations WHERE song_1 IS NOT NULL AND song_1 != ''
         UNION ALL
-        SELECT id, company, contact_name, group_name, type, LOWER(TRIM(song_2)) as song, song_2_artist as artist, 2 as song_num FROM registrations
+        SELECT id, company, contact_name, group_name, type, LOWER(TRIM(song_2)) as song, song_2_artist as artist, 2 as song_num FROM registrations WHERE song_2 IS NOT NULL AND song_2 != ''
       )
       SELECT song, artist, json_agg(json_build_object(
         'registration_id', id, 'company', company, 'contact_name', contact_name,
@@ -147,6 +147,7 @@ router.get('/songs', async (req, res) => {
       SELECT r.id, r.company, r.type, r.contact_name, r.group_name, r.status,
         r.song_1, r.song_1_artist, r.song_2, r.song_2_artist
       FROM registrations r
+      WHERE r.type != 'pubblico' AND r.song_1 IS NOT NULL
       ORDER BY r.company, r.contact_name
     `);
     res.json(rows);
