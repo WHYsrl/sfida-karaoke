@@ -92,6 +92,11 @@ async function startServer() {
       used_at TIMESTAMPTZ,
       expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '10 minutes')
     )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS app_settings (
+      key VARCHAR(100) PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
     console.log('✅ Database schema verified');
   } catch (e) {
     console.warn('⚠️ Migration check skipped:', e.message);

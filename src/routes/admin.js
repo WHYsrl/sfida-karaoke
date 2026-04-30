@@ -12,8 +12,50 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
 }
 
+// ========== PUBLIC: Registration status (no auth) ==========
+router.get('/registration-status', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT value FROM app_settings WHERE key = 'candidature_blocked'"
+    );
+    const blocked = rows.length > 0 && rows[0].value === 'true';
+    res.json({ candidature_blocked: blocked });
+  } catch (err) {
+    // Table might not exist yet
+    res.json({ candidature_blocked: false });
+  }
+});
+
 // All admin routes require authentication
 router.use(adminAuth);
+
+// ========== GET/SET CANDIDATURE BLOCK ==========
+router.get('/settings/candidature-block', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT value FROM app_settings WHERE key = 'candidature_blocked'"
+    );
+    const blocked = rows.length > 0 && rows[0].value === 'true';
+    res.json({ candidature_blocked: blocked });
+  } catch (err) {
+    res.json({ candidature_blocked: false });
+  }
+});
+
+router.put('/settings/candidature-block', async (req, res) => {
+  try {
+    const { blocked } = req.body;
+    await pool.query(
+      `INSERT INTO app_settings (key, value) VALUES ('candidature_blocked', $1)
+       ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
+      [blocked ? 'true' : 'false']
+    );
+    res.json({ success: true, candidature_blocked: !!blocked });
+  } catch (err) {
+    console.error('Settings update error:', err);
+    res.status(500).json({ error: 'Errore aggiornamento impostazioni' });
+  }
+});
 
 // ========== DASHBOARD STATS ==========
 router.get('/stats', async (req, res) => {

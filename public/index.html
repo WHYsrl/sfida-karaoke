@@ -767,6 +767,33 @@
     let editMode = false;
     let editRegistrationId = null;
     let otpEmail = null;
+    let candidatureBlocked = false;
+
+    // Check if candidature are blocked
+    fetch('/api/admin/registration-status')
+      .then(r => r.json())
+      .then(data => {
+        if (data.candidature_blocked) {
+          candidatureBlocked = true;
+          // Disable solista/gruppo radio buttons
+          const solistaRadio = form.querySelector('[name="type"][value="solista"]');
+          const gruppoRadio = form.querySelector('[name="type"][value="gruppo"]');
+          const pubblRadio = form.querySelector('[name="type"][value="pubblico"]');
+          solistaRadio.disabled = true;
+          gruppoRadio.disabled = true;
+          // Style disabled cards
+          solistaRadio.closest('.toggle-option').style.opacity = '0.4';
+          solistaRadio.closest('.toggle-option').style.pointerEvents = 'none';
+          gruppoRadio.closest('.toggle-option').style.opacity = '0.4';
+          gruppoRadio.closest('.toggle-option').style.pointerEvents = 'none';
+          // Auto-select pubblico
+          pubblRadio.checked = true;
+          toggleTypeFields();
+          // Show info banner
+          showAlert('Le candidature come solista e gruppo sono chiuse. Puoi ancora registrarti come pubblico per venire a tifare!', 'warning');
+        }
+      })
+      .catch(() => {});
 
     // Pre-fill from invite token
     if (token) {

@@ -328,6 +328,17 @@
 
   <!-- ===== TAB: DASHBOARD ===== -->
   <div class="tab-content active" id="tab-dashboard">
+    <!-- Candidature block toggle -->
+    <div id="blockToggleSection" style="margin-bottom:20px;padding:16px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">Candidature Solista / Gruppo</div>
+        <div style="font-size:12px;color:var(--text-muted);" id="blockStatusText">Stato: caricamento...</div>
+      </div>
+      <button id="blockToggleBtn" onclick="toggleCandidatureBlock()" style="padding:10px 20px;border-radius:8px;border:none;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;">
+        Caricamento...
+      </button>
+    </div>
+
     <!-- Stats -->
     <div class="stats-grid" id="statsGrid"></div>
 
@@ -515,6 +526,7 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
         document.getElementById('loginOverlay').classList.add('hidden');
         document.getElementById('mainHeader').classList.remove('hidden');
         document.getElementById('mainDashboard').classList.remove('hidden');
+        loadBlockStatus();
         loadDashboard();
       })
       .catch(() => {
@@ -524,6 +536,54 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
 
   function api(path) {
     return fetch(`/api/admin${path}`, { headers: { 'X-Admin-Password': adminPassword } }).then(r => r.json());
+  }
+
+  // ===== CANDIDATURE BLOCK =====
+  let candidatureBlocked = false;
+
+  async function loadBlockStatus() {
+    try {
+      const data = await api('/settings/candidature-block');
+      candidatureBlocked = data.candidature_blocked;
+      updateBlockUI();
+    } catch (e) { /* silent */ }
+  }
+
+  function updateBlockUI() {
+    const btn = document.getElementById('blockToggleBtn');
+    const text = document.getElementById('blockStatusText');
+    if (candidatureBlocked) {
+      btn.textContent = 'Riapri candidature';
+      btn.style.background = 'var(--success)';
+      btn.style.color = '#fff';
+      text.innerHTML = 'Stato: <strong style="color:var(--error);">CHIUSE</strong> — solo pubblico accettato';
+    } else {
+      btn.textContent = 'Blocca candidature';
+      btn.style.background = 'var(--error)';
+      btn.style.color = '#fff';
+      text.innerHTML = 'Stato: <strong style="color:var(--success);">APERTE</strong> — solista, gruppo e pubblico';
+    }
+  }
+
+  async function toggleCandidatureBlock() {
+    const newState = !candidatureBlocked;
+    const action = newState ? 'bloccare le candidature solista/gruppo' : 'riaprire le candidature solista/gruppo';
+    if (!confirm(`Sei sicuro di voler ${action}?`)) return;
+    try {
+      const res = await fetch('/api/admin/settings/candidature-block', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+        body: JSON.stringify({ blocked: newState }),
+      });
+      if (res.ok) {
+        candidatureBlocked = newState;
+        updateBlockUI();
+      } else {
+        alert('Errore nell\'aggiornamento');
+      }
+    } catch (e) {
+      alert('Errore di connessione');
+    }
   }
 
   // ===== TABS =====

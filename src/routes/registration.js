@@ -311,6 +311,18 @@ router.post('/', async (req, res) => {
     if (!type || !['solista', 'gruppo', 'pubblico'].includes(type)) {
       return res.status(400).json({ error: 'Tipo partecipazione non valido' });
     }
+
+    // Check if solista/gruppo candidatures are blocked
+    if (type !== 'pubblico') {
+      try {
+        const { rows: settingsRows } = await pool.query(
+          "SELECT value FROM app_settings WHERE key = 'candidature_blocked'"
+        );
+        if (settingsRows.length > 0 && settingsRows[0].value === 'true') {
+          return res.status(403).json({ error: 'Le candidature come solista e gruppo sono chiuse. Puoi ancora registrarti come pubblico.' });
+        }
+      } catch (e) { /* table might not exist yet, allow */ }
+    }
     if (!firstName || !lastName || !contact_email) {
       return res.status(400).json({ error: 'Nome, cognome e email sono obbligatori' });
     }
