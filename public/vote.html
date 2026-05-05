@@ -521,7 +521,7 @@
         return `
           <div class="performer-card ${cardClass}" data-id="${p.id}">
             <div class="performer-name">${escHtml(p.name)}</div>
-            <div class="performer-meta">${escHtml(p.company)} &bull; ${p.type === 'solista' ? 'Solista' : 'Gruppo'}</div>
+            <div class="performer-meta"><img src="/img/${p.company === 'ourfilms' ? 'ourfilms' : 'framebyframe'}.png" style="height:16px;vertical-align:middle;border-radius:2px;margin-right:4px;opacity:0.9;"> ${p.type === 'solista' ? 'Solista' : 'Gruppo'}</div>
             ${membersHtml}
             ${p.song ? `<div class="performer-song">"${escHtml(p.song)}"${p.song_artist ? ` — ${escHtml(p.song_artist)}` : ''}</div>` : ''}
             ${statusHtml}

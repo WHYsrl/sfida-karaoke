@@ -522,4 +522,110 @@ router.get('/admin/voter-stats', adminAuth, async (req, res) => {
   }
 });
 
+// ========== ADMIN: Reset all votes ==========
+router.delete('/admin/reset-votes', adminAuth, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query('DELETE FROM votes');
+    // Also close all voting and clear timer
+    await pool.query(`UPDATE registrations SET voting_open = false WHERE type != 'pubblico'`);
+    await pool.query(
+      `INSERT INTO app_settings (key, value) VALUES ('voting_timer_ends_at', '')
+       ON CONFLICT (key) DO UPDATE SET value = '', updated_at = NOW()`
+    );
+    res.json({ success: true, deleted: rowCount });
+  } catch (err) {
+    console.error('Reset votes error:', err);
+    res.status(500).json({ error: 'Errore nel reset delle votazioni' });
+  }
+});
+
+// ========== ADMIN: Toggle projector results visibility ==========
+router.put('/admin/show-results', adminAuth, async (req, res) => {
+  try {
+    const { visible } = req.body; // boolean
+    await pool.query(
+      `INSERT INTO app_settings (key, value) VALUES ('projector_show_results', $1)
+       ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
+      [visible ? 'true' : 'false']
+    );
+    res.json({ success: true, visible: !!visible });
+  } catch (err) {
+    console.error('Show results error:', err);
+    res.status(500).json({ error: 'Errore aggiornamento visibilità risultati' });
+  }
+});
+
+router.get('/admin/show-results', adminAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT value FROM app_settings WHERE key = 'projector_show_results'`
+    );
+    res.json({ visible: rows.length > 0 && rows[0].value === 'true' });
+  } catch (err) {
+    res.json({ visible: false });
+  }
+});
+
+// ========== PUBLIC: full projector data (results + status) ==========
+router.get('/projector-data', async (req, res) => {
+  try {
+    // Voting status
+    const { rows: openPerformers } = await pool.query(`
+      SELECT id, type, contact_name, group_name, company, song_1, song_1_artist, song_2, song_2_artist, current_song_num
+      FROM registrations WHERE voting_open = true AND type != 'pubblico'
+      ORDER BY voting_order NULLS LAST, created_at
+    `);
+    // Timer
+    const { rows: timerRows } = await pool.query(
+      `SELECT value FROM app_settings WHERE key = 'voting_timer_ends_at'`
+    );
+    const timerEndsAt = timerRows.length && timerRows[0].value ? timerRows[0].value : null;
+    // Show results flag
+    const { rows: showRows } = await pool.query(
+      `SELECT value FROM app_settings WHERE key = 'projector_show_results'`
+    );
+    const showResults = showRows.length > 0 && showRows[0].value === 'true';
+    // Results (always fetch, frontend decides whether to show)
+    const { rows: results } = await pool.query(`
+      SELECT r.id,
+        CASE WHEN r.type = 'gruppo' THEN r.group_name ELSE r.contact_name END as name,
+        r.type, r.company,
+        ROUND(AVG(v.score_preparation)::numeric, 2) as avg_preparation,
+        ROUND(AVG(v.score_performance)::numeric, 2) as avg_performance,
+        ROUND((AVG(v.score_preparation) + AVG(v.score_performance))::numeric, 2) as total_avg,
+        COUNT(v.id) as vote_count
+      FROM registrations r
+      INNER JOIN votes v ON v.registration_id = r.id
+      GROUP BY r.id
+      ORDER BY total_avg DESC NULLS LAST
+    `);
+
+    res.json({
+      voting_open: openPerformers.length > 0,
+      open_performers: openPerformers.map(p => {
+        const sn = p.current_song_num || 1;
+        return {
+          id: p.id,
+          name: p.type === 'gruppo' ? p.group_name : p.contact_name,
+          company: p.company, type: p.type,
+          song: sn === 2 ? p.song_2 : p.song_1,
+          song_artist: sn === 2 ? p.song_2_artist : p.song_1_artist,
+        };
+      }),
+      timer_ends_at: timerEndsAt,
+      show_results: showResults,
+      results: results.map(r => ({
+        name: r.name, type: r.type, company: r.company,
+        avg_preparation: r.avg_preparation ? parseFloat(r.avg_preparation) : null,
+        avg_performance: r.avg_performance ? parseFloat(r.avg_performance) : null,
+        total_avg: r.total_avg ? parseFloat(r.total_avg) : null,
+        vote_count: parseInt(r.vote_count),
+      })),
+    });
+  } catch (err) {
+    console.error('Projector data error:', err);
+    res.status(500).json({ error: 'Errore dati proiettore' });
+  }
+});
+
 module.exports = router;

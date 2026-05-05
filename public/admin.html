@@ -513,12 +513,25 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
           <button onclick="votingBulkAction('open')" style="padding:8px 16px;border-radius:8px;border:none;background:var(--success);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">Apri tutte</button>
           <button onclick="votingBulkAction('close')" style="padding:8px 16px;border-radius:8px;border:none;background:var(--error);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">Chiudi tutte</button>
           <button onclick="showTimerModal()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--warning);color:#000;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">Timer</button>
+          <button onclick="resetAllVotes()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--error);background:transparent;color:var(--error);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">Reset voti</button>
         </div>
       </div>
       <div id="votingTimer" style="display:none;margin-top:12px;padding:12px;background:rgba(245,158,11,0.1);border:1px solid var(--warning);border-radius:8px;text-align:center;">
-        <div style="font-size:12px;color:var(--warning);margin-bottom:4px;">VOTAZIONE APERTA — CHIUSURA TRA:</div>
+        <div style="font-size:12px;color:var(--warning);margin-bottom:4px;">TIMER ATTIVO — CHIUSURA TRA:</div>
         <div id="timerDisplay" style="font-size:2rem;font-weight:700;color:var(--warning);">--:--</div>
         <button onclick="cancelTimer()" style="margin-top:8px;padding:6px 12px;border-radius:6px;border:1px solid var(--warning);background:transparent;color:var(--warning);font-family:inherit;font-size:11px;cursor:pointer;">Annulla timer</button>
+      </div>
+    </div>
+
+    <!-- Proiettore control -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <span>Proiettore</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span id="projectorResultsStatus" style="font-size:11px;color:var(--text-muted);">Risultati: nascosti</span>
+          <button id="projectorResultsBtn" onclick="toggleProjectorResults()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--info);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">Mostra risultati</button>
+          <a href="leaderboard.html" target="_blank" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);color:var(--text-muted);font-family:inherit;font-size:12px;text-decoration:none;">Apri proiettore &rarr;</a>
+        </div>
       </div>
     </div>
 
@@ -530,10 +543,7 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
 
     <!-- Live results -->
     <div class="card" style="margin-bottom:16px;">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>Classifica Live</span>
-        <a href="leaderboard.html" target="_blank" style="font-size:12px;color:var(--info);text-decoration:none;">Apri proiettore &rarr;</a>
-      </div>
+      <div class="card-title">Risultati</div>
       <div id="votingLeaderboard" style="margin-top:12px;"></div>
     </div>
 
@@ -1327,6 +1337,7 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     await loadVotingPerformers();
     await loadVotingLeaderboard();
     await loadVoterStats();
+    await loadProjectorResultsStatus();
   }
 
   async function loadVotingPerformers() {
@@ -1640,6 +1651,52 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
         </details>
       ` : ''}
     `;
+  }
+
+  // ===== RESET VOTES =====
+  async function resetAllVotes() {
+    if (!confirm('ATTENZIONE: Questa azione cancellerà TUTTI i voti e chiuderà tutte le votazioni. Sei sicuro?')) return;
+    if (!confirm('Conferma definitiva: tutti i voti verranno eliminati permanentemente.')) return;
+    try {
+      const res = await voteApi('/reset-votes', { method: 'DELETE' });
+      if (res.error) throw new Error(res.error);
+      cancelTimer(true);
+      alert(`Reset completato. ${res.deleted || 0} voti eliminati.`);
+      loadVotingTab();
+    } catch (e) {
+      alert('Errore: ' + e.message);
+    }
+  }
+
+  // ===== PROJECTOR RESULTS TOGGLE =====
+  let projectorResultsVisible = false;
+
+  async function loadProjectorResultsStatus() {
+    try {
+      const data = await voteApi('/show-results');
+      projectorResultsVisible = data.visible;
+      updateProjectorResultsUI();
+    } catch (e) { /* silent */ }
+  }
+
+  function updateProjectorResultsUI() {
+    const btn = document.getElementById('projectorResultsBtn');
+    const status = document.getElementById('projectorResultsStatus');
+    if (projectorResultsVisible) {
+      btn.textContent = 'Nascondi risultati';
+      btn.style.background = 'var(--error)';
+      status.innerHTML = 'Risultati: <strong style="color:var(--success);">VISIBILI</strong>';
+    } else {
+      btn.textContent = 'Mostra risultati';
+      btn.style.background = 'var(--info)';
+      status.innerHTML = 'Risultati: <strong style="color:var(--text-muted);">nascosti</strong>';
+    }
+  }
+
+  async function toggleProjectorResults() {
+    projectorResultsVisible = !projectorResultsVisible;
+    await voteApi('/show-results', { method: 'PUT', body: JSON.stringify({ visible: projectorResultsVisible }) });
+    updateProjectorResultsUI();
   }
 </script>
 </body>
