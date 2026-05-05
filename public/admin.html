@@ -1442,9 +1442,15 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
   }
 
   async function votingBulkAction(action) {
-    const ids = votingPerformers.map(p => p.id);
+    const admitted = votingPerformers.filter(p => p.status === 'accepted');
+    const ids = admitted.map(p => p.id);
     const open = action === 'open';
     await voteApi('/toggle', { method: 'PUT', body: JSON.stringify({ ids, open }) });
+    // If closing all, also clear timer
+    if (!open) {
+      await voteApi('/timer', { method: 'PUT', body: JSON.stringify({ ends_at: null }) });
+      cancelTimer(true);
+    }
     loadVotingPerformers();
   }
 

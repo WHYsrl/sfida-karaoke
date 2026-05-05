@@ -409,20 +409,29 @@ router.put('/admin/timer', adminAuth, async (req, res) => {
 // ========== PUBLIC: voting status for projector ==========
 router.get('/projector-status', async (req, res) => {
   try {
-    // Check if any voting is open
-    const { rows: openRows } = await pool.query(
-      `SELECT COUNT(*) as open_count FROM registrations WHERE voting_open = true AND type != 'pubblico'`
-    );
+    // Get performers with open voting
+    const { rows: openPerformers } = await pool.query(`
+      SELECT id, type, contact_name, group_name, company, song_1
+      FROM registrations
+      WHERE voting_open = true AND type != 'pubblico'
+      ORDER BY voting_order NULLS LAST, created_at
+    `);
     // Get timer
     const { rows: timerRows } = await pool.query(
       `SELECT value FROM app_settings WHERE key = 'voting_timer_ends_at'`
     );
     const timerEndsAt = timerRows.length && timerRows[0].value ? timerRows[0].value : null;
-    const anyOpen = parseInt(openRows[0].open_count) > 0;
 
     res.json({
-      voting_open: anyOpen,
-      open_count: parseInt(openRows[0].open_count),
+      voting_open: openPerformers.length > 0,
+      open_count: openPerformers.length,
+      open_performers: openPerformers.map(p => ({
+        id: p.id,
+        name: p.type === 'gruppo' ? p.group_name : p.contact_name,
+        company: p.company,
+        type: p.type,
+        song: p.song_1,
+      })),
       timer_ends_at: timerEndsAt
     });
   } catch (err) {
