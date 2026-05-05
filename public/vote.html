@@ -161,6 +161,14 @@
       color: #aaa;
       margin-bottom: 12px;
     }
+    .performer-members {
+      font-size: 0.8rem;
+      color: #999;
+      margin-bottom: 6px;
+    }
+    .performer-members span {
+      display: inline;
+    }
     .performer-song {
       font-size: 0.85rem;
       color: #ccc;
@@ -506,11 +514,16 @@
 
         const cardClass = isSelf ? 'closed' : (voted ? 'voted' : (!isOpen ? 'closed' : ''));
 
+        const membersHtml = p.members && p.members.length
+          ? `<div class="performer-members">👥 ${p.members.map(m => escHtml(m)).join(', ')}</div>`
+          : '';
+
         return `
           <div class="performer-card ${cardClass}" data-id="${p.id}">
             <div class="performer-name">${escHtml(p.name)}</div>
             <div class="performer-meta">${escHtml(p.company)} &bull; ${p.type === 'solista' ? 'Solista' : 'Gruppo'}</div>
-            ${p.song ? `<div class="performer-song">"${escHtml(p.song)}"</div>` : ''}
+            ${membersHtml}
+            ${p.song ? `<div class="performer-song">"${escHtml(p.song)}"${p.song_artist ? ` — ${escHtml(p.song_artist)}` : ''}</div>` : ''}
             ${statusHtml}
           </div>
         `;

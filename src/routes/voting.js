@@ -147,8 +147,9 @@ router.get('/performers', voterAuth, async (req, res) => {
     // Get all accepted registrations (solista + gruppo only, not pubblico)
     const { rows: performers } = await pool.query(`
       SELECT r.id, r.type, r.contact_name, r.contact_email, r.group_name, r.company,
-        r.song_1, r.song_1_artist, r.voting_open,
-        COALESCE(json_agg(json_build_object('email', LOWER(gm.email)))
+        r.song_1, r.song_1_artist, r.song_2, r.song_2_artist,
+        r.current_song_num, r.voting_open,
+        COALESCE(json_agg(json_build_object('name', gm.name, 'email', LOWER(gm.email)))
           FILTER (WHERE gm.id IS NOT NULL), '[]') as members
       FROM registrations r
       LEFT JOIN group_members gm ON gm.registration_id = r.id
@@ -179,17 +180,28 @@ router.get('/performers', voterAuth, async (req, res) => {
       ...ownGroups.map(r => r.id)
     ]);
 
-    const result = performers.map(p => ({
-      id: p.id,
-      type: p.type,
-      name: p.type === 'gruppo' ? p.group_name : p.contact_name,
-      company: p.company,
-      song: p.song_1,
-      song_artist: p.song_1_artist,
-      voting_open: p.voting_open,
-      is_self: selfRegIds.has(p.id),
-      my_vote: votesMap[p.id] || null,
-    }));
+    const result = performers.map(p => {
+      const songNum = p.current_song_num || 1;
+      const currentSong = songNum === 2 ? p.song_2 : p.song_1;
+      const currentArtist = songNum === 2 ? p.song_2_artist : p.song_1_artist;
+      // For groups, include member names (but not emails for privacy)
+      const memberNames = p.type === 'gruppo'
+        ? p.members.filter(m => m.name).map(m => m.name)
+        : [];
+
+      return {
+        id: p.id,
+        type: p.type,
+        name: p.type === 'gruppo' ? p.group_name : p.contact_name,
+        company: p.company,
+        song: currentSong,
+        song_artist: currentArtist,
+        voting_open: p.voting_open,
+        is_self: selfRegIds.has(p.id),
+        my_vote: votesMap[p.id] || null,
+        members: memberNames,
+      };
+    });
 
     res.json(result);
   } catch (err) {
@@ -299,7 +311,8 @@ router.get('/admin/status', adminAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT r.id, r.type, r.status, r.contact_name, r.group_name, r.company,
-        r.song_1, r.song_1_artist, r.voting_open, r.voting_order,
+        r.song_1, r.song_1_artist, r.song_2, r.song_2_artist,
+        r.current_song_num, r.voting_open, r.voting_order,
         COALESCE(SUM(v.score_preparation), 0) as total_preparation,
         COALESCE(SUM(v.score_performance), 0) as total_performance,
         COALESCE(SUM(v.score_preparation + v.score_performance), 0) as total_score,
@@ -311,16 +324,34 @@ router.get('/admin/status', adminAuth, async (req, res) => {
       ORDER BY r.status DESC, r.voting_order NULLS LAST, r.company, r.contact_name
     `);
 
+    // Fetch group members for each gruppo
+    const gruppoIds = rows.filter(r => r.type === 'gruppo').map(r => r.id);
+    let membersMap = {};
+    if (gruppoIds.length) {
+      const { rows: members } = await pool.query(
+        'SELECT registration_id, name, email FROM group_members WHERE registration_id = ANY($1) ORDER BY id',
+        [gruppoIds]
+      );
+      members.forEach(m => {
+        if (!membersMap[m.registration_id]) membersMap[m.registration_id] = [];
+        membersMap[m.registration_id].push({ name: m.name, email: m.email });
+      });
+    }
+
     res.json({ performers: rows.map(r => ({
       id: r.id,
       name: r.type === 'gruppo' ? r.group_name : r.contact_name,
       type: r.type,
       status: r.status,
       company: r.company,
-      song: r.song_1,
-      song_artist: r.song_1_artist,
+      song_1: r.song_1,
+      song_1_artist: r.song_1_artist,
+      song_2: r.song_2,
+      song_2_artist: r.song_2_artist,
+      current_song_num: r.current_song_num || 1,
       voting_open: r.voting_open,
       voting_order: r.voting_order,
+      members: membersMap[r.id] || [],
       total_preparation: parseInt(r.total_preparation),
       total_performance: parseInt(r.total_performance),
       total_score: parseInt(r.total_score),
@@ -334,18 +365,44 @@ router.get('/admin/status', adminAuth, async (req, res) => {
 
 router.put('/admin/toggle', adminAuth, async (req, res) => {
   try {
-    const { ids, open } = req.body; // ids: array of registration IDs, open: boolean
+    const { ids, open, song_num } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'Nessun concorrente selezionato' });
     }
-    await pool.query(
-      `UPDATE registrations SET voting_open = $1 WHERE id = ANY($2::int[]) AND status = 'accepted' AND type != 'pubblico'`,
-      [!!open, ids]
-    );
+    if (open && song_num && [1, 2].includes(song_num)) {
+      await pool.query(
+        `UPDATE registrations SET voting_open = true, current_song_num = $1
+         WHERE id = ANY($2::int[]) AND status = 'accepted' AND type != 'pubblico'`,
+        [song_num, ids]
+      );
+    } else {
+      await pool.query(
+        `UPDATE registrations SET voting_open = $1
+         WHERE id = ANY($2::int[]) AND status = 'accepted' AND type != 'pubblico'`,
+        [!!open, ids]
+      );
+    }
     res.json({ success: true });
   } catch (err) {
     console.error('Admin voting toggle error:', err);
     res.status(500).json({ error: 'Errore nell\'aggiornamento' });
+  }
+});
+
+// Admin: update songs for a performer (last-minute changes)
+router.put('/admin/songs/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { song_1, song_1_artist, song_2, song_2_artist } = req.body;
+    await pool.query(
+      `UPDATE registrations SET song_1 = $1, song_1_artist = $2, song_2 = $3, song_2_artist = $4, updated_at = NOW()
+       WHERE id = $5 AND type != 'pubblico'`,
+      [song_1 || null, song_1_artist || null, song_2 || null, song_2_artist || null, id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Update songs error:', err);
+    res.status(500).json({ error: 'Errore aggiornamento canzoni' });
   }
 });
 
@@ -411,7 +468,7 @@ router.get('/projector-status', async (req, res) => {
   try {
     // Get performers with open voting
     const { rows: openPerformers } = await pool.query(`
-      SELECT id, type, contact_name, group_name, company, song_1
+      SELECT id, type, contact_name, group_name, company, song_1, song_1_artist, song_2, song_2_artist, current_song_num
       FROM registrations
       WHERE voting_open = true AND type != 'pubblico'
       ORDER BY voting_order NULLS LAST, created_at
@@ -425,13 +482,17 @@ router.get('/projector-status', async (req, res) => {
     res.json({
       voting_open: openPerformers.length > 0,
       open_count: openPerformers.length,
-      open_performers: openPerformers.map(p => ({
-        id: p.id,
-        name: p.type === 'gruppo' ? p.group_name : p.contact_name,
-        company: p.company,
-        type: p.type,
-        song: p.song_1,
-      })),
+      open_performers: openPerformers.map(p => {
+        const sn = p.current_song_num || 1;
+        return {
+          id: p.id,
+          name: p.type === 'gruppo' ? p.group_name : p.contact_name,
+          company: p.company,
+          type: p.type,
+          song: sn === 2 ? p.song_2 : p.song_1,
+          song_artist: sn === 2 ? p.song_2_artist : p.song_1_artist,
+        };
+      }),
       timer_ends_at: timerEndsAt
     });
   } catch (err) {

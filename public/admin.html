@@ -1373,30 +1373,46 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     // Admitted section
     if (admitted.length) {
       html += `
-        <div style="display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;">
+        <div style="display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
           <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
             <input type="checkbox" id="selectAllPerformers" onchange="toggleSelectAll(this.checked)"> Seleziona tutti
           </label>
           <button onclick="votingBulkSelected('open')" style="margin-left:12px;padding:4px 10px;border-radius:6px;border:1px solid var(--success);background:transparent;color:var(--success);font-family:inherit;font-size:11px;cursor:pointer;">Apri selezionati</button>
           <button onclick="votingBulkSelected('close')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--error);background:transparent;color:var(--error);font-family:inherit;font-size:11px;cursor:pointer;">Chiudi selezionati</button>
         </div>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          ${admitted.map((p, i) => `
-            <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;">
-              <input type="checkbox" class="performer-checkbox" data-id="${p.id}" style="flex-shrink:0;">
-              <span style="width:24px;text-align:center;color:var(--text-muted);font-size:12px;flex-shrink:0;">${p.voting_order || i+1}</span>
-              <div style="flex:1;min-width:0;">
-                <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</div>
-                <div style="font-size:11px;color:var(--text-muted);">${p.company === 'ourfilms' ? 'Our Films' : 'FBF'} &bull; ${p.type}</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          ${admitted.map((p, i) => {
+            const s1Label = p.song_1 ? esc(p.song_1) + (p.song_1_artist ? ' — '+esc(p.song_1_artist) : '') : 'Canzone 1';
+            const s2Label = p.song_2 ? esc(p.song_2) + (p.song_2_artist ? ' — '+esc(p.song_2_artist) : '') : 'Canzone 2';
+            const csn = p.current_song_num || 1;
+            return `
+            <div style="padding:12px 14px;background:var(--bg-input);border:1px solid ${p.voting_open ? 'var(--success)' : 'var(--border)'};border-radius:10px;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <input type="checkbox" class="performer-checkbox" data-id="${p.id}" style="flex-shrink:0;">
+                <span style="width:22px;text-align:center;color:var(--text-muted);font-size:12px;flex-shrink:0;">${p.voting_order || i+1}</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-weight:600;font-size:13px;">${esc(p.name)}</div>
+                  <div style="font-size:11px;color:var(--text-muted);">${p.company === 'ourfilms' ? 'Our Films' : 'FBF'} &bull; ${p.type}${p.members && p.members.length ? ' &bull; ' + p.members.map(m=>esc(m.name)).join(', ') : ''}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                  <span style="font-size:11px;font-weight:700;color:${p.voting_open ? 'var(--success)' : 'var(--text-muted)'};">${p.voting_open ? 'APERTA' : 'CHIUSA'}</span>
+                  ${p.voting_open
+                    ? `<button onclick="toggleSingleVoting(${p.id}, false)" style="padding:6px 12px;border-radius:6px;border:none;background:var(--error);color:#fff;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;">Chiudi</button>`
+                    : ''}
+                </div>
               </div>
-              <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-                <span style="font-size:11px;color:${p.voting_open ? 'var(--success)' : 'var(--text-muted)'};">${p.voting_open ? 'APERTA' : 'CHIUSA'}</span>
-                <button onclick="toggleSingleVoting(${p.id}, ${!p.voting_open})" style="padding:6px 12px;border-radius:6px;border:none;background:${p.voting_open ? 'var(--error)' : 'var(--success)'};color:#fff;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;">
-                  ${p.voting_open ? 'Chiudi' : 'Apri'}
+              <!-- Song selection & open buttons -->
+              <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                <button onclick="openWithSong(${p.id}, 1)" style="flex:1;min-width:120px;padding:7px 10px;border-radius:6px;border:1px solid ${csn===1 && p.voting_open ? 'var(--success)' : 'var(--border)'};background:${csn===1 && p.voting_open ? 'rgba(34,197,94,0.12)' : 'transparent'};color:var(--text);font-family:inherit;font-size:11px;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                  🎵1 ${s1Label}
                 </button>
+                <button onclick="openWithSong(${p.id}, 2)" style="flex:1;min-width:120px;padding:7px 10px;border-radius:6px;border:1px solid ${csn===2 && p.voting_open ? 'var(--success)' : 'var(--border)'};background:${csn===2 && p.voting_open ? 'rgba(34,197,94,0.12)' : 'transparent'};color:var(--text);font-family:inherit;font-size:11px;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                  🎵2 ${s2Label}
+                </button>
+                <button onclick="editSongsModal(${p.id})" style="padding:7px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-family:inherit;font-size:11px;cursor:pointer;flex-shrink:0;" title="Modifica canzoni">✏️</button>
               </div>
-            </div>
-          `).join('')}
+            </div>`;
+          }).join('')}
         </div>
       `;
     } else if (!notAdmitted.length) {
@@ -1441,6 +1457,53 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     loadVotingPerformers();
   }
 
+  async function openWithSong(id, songNum) {
+    await voteApi('/toggle', { method: 'PUT', body: JSON.stringify({ ids: [id], open: true, song_num: songNum }) });
+    loadVotingPerformers();
+  }
+
+  function editSongsModal(performerId) {
+    const p = votingPerformers.find(x => x.id === performerId);
+    if (!p) return;
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;width:420px;max-width:90vw;">
+        <h3 style="color:var(--gold);margin-bottom:16px;">Modifica canzoni — ${esc(p.name)}</h3>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px;">Canzone 1</label>
+          <input id="es1" value="${esc(p.song_1||'')}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:13px;margin-bottom:4px;">
+          <input id="ea1" value="${esc(p.song_1_artist||'')}" placeholder="Artista" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:13px;">
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px;">Canzone 2</label>
+          <input id="es2" value="${esc(p.song_2||'')}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:13px;margin-bottom:4px;">
+          <input id="ea2" value="${esc(p.song_2_artist||'')}" placeholder="Artista" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:13px;">
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button id="editCancelBtn" style="padding:8px 16px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-family:inherit;cursor:pointer;">Annulla</button>
+          <button id="editSaveBtn" style="padding:8px 16px;border-radius:6px;border:none;background:var(--gold);color:var(--bg);font-family:inherit;font-weight:600;cursor:pointer;">Salva</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#editCancelBtn').onclick = () => modal.remove();
+    modal.querySelector('#editSaveBtn').onclick = async () => {
+      await voteApi(`/songs/${performerId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          song_1: document.getElementById('es1').value,
+          song_1_artist: document.getElementById('ea1').value,
+          song_2: document.getElementById('es2').value,
+          song_2_artist: document.getElementById('ea2').value,
+        })
+      });
+      modal.remove();
+      loadVotingPerformers();
+    };
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+  }
+
   async function votingBulkAction(action) {
     const admitted = votingPerformers.filter(p => p.status === 'accepted');
     const ids = admitted.map(p => p.id);
@@ -1463,16 +1526,21 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
   }
 
   function showTimerModal() {
-    const minutes = prompt('Minuti per la votazione:', '10');
+    // Check if any voting is currently open
+    const admitted = votingPerformers.filter(p => p.status === 'accepted');
+    const openNow = admitted.filter(p => p.voting_open);
+    if (openNow.length === 0) {
+      alert('Nessuna votazione aperta. Apri prima le votazioni per gli artisti desiderati, poi avvia il timer.');
+      return;
+    }
+    const minutes = prompt(`Timer per ${openNow.length} votazione/i aperta/e.\nMinuti:`, '10');
     if (!minutes || isNaN(minutes) || parseInt(minutes) <= 0) return;
     startTimer(parseInt(minutes));
   }
 
   async function startTimer(minutes) {
-    // Open all performers
-    await votingBulkAction('open');
+    // Timer only — does NOT open any voting. Only counts down and closes when done.
     votingTimerEnd = Date.now() + minutes * 60 * 1000;
-    // Save timer to backend for projector
     const endsAt = new Date(votingTimerEnd).toISOString();
     await voteApi('/timer', { method: 'PUT', body: JSON.stringify({ ends_at: endsAt }) });
     document.getElementById('votingTimer').style.display = 'block';
@@ -1481,7 +1549,13 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
       updateTimerDisplay();
       if (Date.now() >= votingTimerEnd) {
         cancelTimer(true);
-        votingBulkAction('close');
+        // Close only the ones that are currently open
+        const openIds = votingPerformers.filter(p => p.voting_open).map(p => p.id);
+        if (openIds.length) {
+          voteApi('/toggle', { method: 'PUT', body: JSON.stringify({ ids: openIds, open: false }) });
+          voteApi('/timer', { method: 'PUT', body: JSON.stringify({ ends_at: null }) });
+        }
+        loadVotingPerformers();
         alert('Tempo scaduto! Votazioni chiuse.');
       }
     }, 1000);

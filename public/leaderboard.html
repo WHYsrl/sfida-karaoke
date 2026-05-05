@@ -134,19 +134,25 @@
       background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.15);
       border-radius: 30px;
-      padding: 6px 16px;
-      font-size: 0.9rem;
+      padding: 8px 18px;
+      font-size: 0.95rem;
       font-weight: 600;
       white-space: nowrap;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
     .performer-pill .pill-company {
       font-size: 0.65rem;
       color: #888;
       font-weight: 400;
       text-transform: uppercase;
+    }
+    .performer-pill .pill-song {
+      font-size: 0.75rem;
+      color: #ccc;
+      font-weight: 400;
+      font-style: italic;
     }
 
     /* Timer */
@@ -333,6 +339,7 @@
           `<div class="performer-pill">
             ${esc(p.name)}
             <span class="pill-company">${p.company === 'ourfilms' ? 'OF' : 'FBF'}</span>
+            ${p.song ? `<span class="pill-song">"${esc(p.song)}"</span>` : ''}
           </div>`
         ).join('');
       } else {

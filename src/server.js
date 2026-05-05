@@ -102,6 +102,7 @@ async function startServer() {
     // Voting system migrations
     await pool.query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS voting_open BOOLEAN DEFAULT false`);
     await pool.query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS voting_order INT`);
+    await pool.query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS current_song_num INT DEFAULT 1`);
     await pool.query(`CREATE TABLE IF NOT EXISTS voter_tokens (
       id SERIAL PRIMARY KEY,
       email VARCHAR(255) NOT NULL,
