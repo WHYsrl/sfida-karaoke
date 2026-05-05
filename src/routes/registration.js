@@ -420,6 +420,8 @@ router.post('/', async (req, res) => {
   }
 });
 
+const REGOLAMENTO_URL = process.env.REGOLAMENTO_PDF_URL || 'https://sfida-karaoke.onrender.com/docs/regolamento.pdf';
+
 // ========== EMAIL TEMPLATE: Confirmation for contact/soloist ==========
 function buildConfirmationEmail(name, participant, companyLabel, song1, song1Artist, song2, song2Artist, members) {
   const membersHtml = members && members.length > 0
@@ -450,9 +452,10 @@ function buildConfirmationEmail(name, participant, companyLabel, song1, song1Art
       <p style="color:#ccc;line-height:1.6;">La tua candidatura sarà valutata dal team organizzativo. Riceverai una email con l'esito.</p>
       <div style="background:#1a1a1a;padding:16px;border-radius:8px;margin:16px 0;">
         <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">📅 Giovedì 7 Maggio 2026</p>
-        <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">🕗 Ore 20:00 — 24:00</p>
+        <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">🕗 Ore 19:30 — 24:00</p>
         <p style="color:#c9a84c;margin:0;font-weight:600;">📍 Jackie'O — Via Boncompagni 11, Roma</p>
       </div>
+      <p style="color:#ccc;line-height:1.6;">📄 <a href="${REGOLAMENTO_URL}" style="color:#c9a84c;">Consulta il regolamento della serata</a></p>
     </div>
     <div style="padding:16px;text-align:center;border-top:1px solid #222;">
       <p style="color:#666;font-size:12px;margin:0;">Sfida Karaoke 2026 — Jackie'O, Via Boncompagni 11, Roma</p>
@@ -482,9 +485,10 @@ function buildMemberConfirmationEmail(memberName, groupName, contactName, compan
       <p style="color:#ccc;line-height:1.6;">La candidatura sarà valutata dal team organizzativo. Riceverete una comunicazione con l'esito.</p>
       <div style="background:#1a1a1a;padding:16px;border-radius:8px;margin:16px 0;">
         <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">📅 Giovedì 7 Maggio 2026</p>
-        <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">🕗 Ore 20:00 — 24:00</p>
+        <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">🕗 Ore 19:30 — 24:00</p>
         <p style="color:#c9a84c;margin:0;font-weight:600;">📍 Jackie'O — Via Boncompagni 11, Roma</p>
       </div>
+      <p style="color:#ccc;line-height:1.6;">📄 <a href="${REGOLAMENTO_URL}" style="color:#c9a84c;">Consulta il regolamento della serata</a></p>
     </div>
     <div style="padding:16px;text-align:center;border-top:1px solid #222;">
       <p style="color:#666;font-size:12px;margin:0;">Sfida Karaoke 2026 — Jackie'O, Via Boncompagni 11, Roma</p>
@@ -508,9 +512,10 @@ function buildPubblicoConfirmationEmail(name, companyLabel) {
       <p style="color:#ccc;line-height:1.6;">La tua registrazione come <strong>pubblico</strong> per il team <strong style="color:#c9a84c;">${companyLabel}</strong> è confermata. Ti aspettiamo per tifare e divertirti!</p>
       <div style="background:#1a1a1a;padding:16px;border-radius:8px;margin:16px 0;">
         <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">📅 Giovedì 7 Maggio 2026</p>
-        <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">🕗 Ore 20:00 — 24:00</p>
+        <p style="color:#c9a84c;margin:0 0 6px;font-weight:600;">🕗 Ore 19:30 — 24:00</p>
         <p style="color:#c9a84c;margin:0;font-weight:600;">📍 Jackie'O — Via Boncompagni 11, Roma</p>
       </div>
+      <p style="color:#ccc;line-height:1.6;">📄 <a href="${REGOLAMENTO_URL}" style="color:#c9a84c;">Consulta il regolamento della serata</a></p>
     </div>
     <div style="padding:16px;text-align:center;border-top:1px solid #222;">
       <p style="color:#666;font-size:12px;margin:0;">Sfida Karaoke 2026 — Jackie'O, Via Boncompagni 11, Roma</p>

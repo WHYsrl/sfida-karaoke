@@ -243,6 +243,29 @@ router.put('/registrations/:id/status', async (req, res) => {
           html: emailContent.html,
         });
         resendMessageId = emailResult.data?.id || null;
+
+        // If group and accepted/revision/rejected, also notify members
+        if (reg.type === 'gruppo') {
+          const { rows: members } = await client.query(
+            'SELECT name, email FROM group_members WHERE registration_id = $1',
+            [id]
+          );
+          for (const member of members) {
+            if (member.email) {
+              try {
+                const memberEmail = buildGroupMemberStatusEmail(member.name, reg.group_name, reg, status, message);
+                await resend.emails.send({
+                  from: process.env.RESEND_FROM_EMAIL || 'Sfida Karaoke <karaoke@yourdomain.com>',
+                  to: [member.email],
+                  subject: memberEmail.subject,
+                  html: memberEmail.html,
+                });
+              } catch (memberErr) {
+                console.error(`Error sending status email to member ${member.email}:`, memberErr.message);
+              }
+            }
+          }
+        }
       }
     } catch (emailErr) {
       console.error('Error sending status email:', emailErr);
@@ -550,8 +573,52 @@ router.get('/email-tracking', async (req, res) => {
 });
 
 // ========== EMAIL TEMPLATE BUILDERS ==========
+const REGOLAMENTO_URL = process.env.REGOLAMENTO_PDF_URL || 'https://sfida-karaoke.onrender.com/docs/regolamento.pdf';
+
 function buildStatusEmail(reg, status, message) {
-  const participant = reg.type === 'gruppo' ? `gruppo "${reg.group_name}"` : reg.contact_name;
+  const participant = reg.type === 'gruppo' ? `gruppo "${reg.group_name}"` : (reg.type === 'pubblico' ? 'pubblico' : reg.contact_name);
+  const statusLabels = {
+    accepted: { subject: '✅ Candidatura Accettata — Sfida Karaoke', color: '#22c55e', title: 'Candidatura Accettata!' },
+    revision: { subject: '📝 Richiesta Revisione — Sfida Karaoke', color: '#f59e0b', title: 'Revisione Richiesta' },
+    rejected: { subject: '❌ Candidatura Non Accettata — Sfida Karaoke', color: '#ef4444', title: 'Candidatura Non Accettata' },
+  };
+  const s = statusLabels[status];
+
+  const songsHtml = (reg.type !== 'pubblico' && reg.song_1) ? `
+        <div style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin: 15px 0;">
+          <p style="color: #999; margin: 0 0 5px; font-size: 13px;">Le tue canzoni:</p>
+          <p style="color: #daa520; margin: 0;">🎵 ${reg.song_1}${reg.song_1_artist ? ` — ${reg.song_1_artist}` : ''}</p>
+          <p style="color: #daa520; margin: 5px 0 0;">🎵 ${reg.song_2}${reg.song_2_artist ? ` — ${reg.song_2_artist}` : ''}</p>
+        </div>` : '';
+
+  return {
+    subject: s.subject,
+    html: `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; color: #fff; border-radius: 12px; overflow: hidden;">
+      <div style="background: linear-gradient(135deg, #b8860b, #daa520, #b8860b); padding: 30px; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px; color: #0a0a0a;">🎤 SFIDA KARAOKE</h1>
+        <p style="margin: 5px 0 0; color: #0a0a0a; font-size: 14px;">Our Films vs Frame by Frame</p>
+      </div>
+      <div style="padding: 30px;">
+        <div style="background: ${s.color}20; border-left: 4px solid ${s.color}; padding: 15px; border-radius: 0 8px 8px 0; margin-bottom: 20px;">
+          <h2 style="margin: 0; color: ${s.color};">${s.title}</h2>
+        </div>
+        <p style="color: #ccc; line-height: 1.6;">Ciao <strong style="color: #daa520;">${reg.contact_name}</strong>,</p>
+        <p style="color: #ccc; line-height: 1.6;">La tua candidatura come <strong>${participant}</strong> per la Sfida Karaoke è stata esaminata.</p>
+        ${message ? `<div style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin: 15px 0;"><p style="color: #ccc; margin: 0; line-height: 1.6;"><strong>Messaggio:</strong> ${message}</p></div>` : ''}
+        ${songsHtml}
+        ${status === 'accepted' ? `<p style="color: #ccc; line-height: 1.6;">Ci vediamo il <strong style="color: #daa520;">7 maggio alle 19:30</strong> al <strong style="color: #daa520;">Jackie'O</strong>, Via Boncompagni 11, Roma! 🎉</p>
+        <p style="color: #ccc; line-height: 1.6;">📄 <a href="${REGOLAMENTO_URL}" style="color: #daa520;">Consulta il regolamento della serata</a></p>` : ''}
+        ${status === 'revision' ? '<p style="color: #ccc; line-height: 1.6;">Ti preghiamo di rivedere la tua candidatura e riprovare. Se hai domande, rispondi a questa email.</p>' : ''}
+      </div>
+      <div style="padding: 20px; text-align: center; border-top: 1px solid #222;">
+        <p style="color: #666; font-size: 12px; margin: 0;">Sfida Karaoke 2026 — Jackie'O, Via Boncompagni 11, Roma</p>
+      </div>
+    </div>`
+  };
+}
+
+function buildGroupMemberStatusEmail(memberName, groupName, reg, status, message) {
   const statusLabels = {
     accepted: { subject: '✅ Candidatura Accettata — Sfida Karaoke', color: '#22c55e', title: 'Candidatura Accettata!' },
     revision: { subject: '📝 Richiesta Revisione — Sfida Karaoke', color: '#f59e0b', title: 'Revisione Richiesta' },
@@ -571,19 +638,15 @@ function buildStatusEmail(reg, status, message) {
         <div style="background: ${s.color}20; border-left: 4px solid ${s.color}; padding: 15px; border-radius: 0 8px 8px 0; margin-bottom: 20px;">
           <h2 style="margin: 0; color: ${s.color};">${s.title}</h2>
         </div>
-        <p style="color: #ccc; line-height: 1.6;">Ciao <strong style="color: #daa520;">${reg.contact_name}</strong>,</p>
-        <p style="color: #ccc; line-height: 1.6;">La tua candidatura come <strong>${participant}</strong> per la Sfida Karaoke è stata esaminata.</p>
+        <p style="color: #ccc; line-height: 1.6;">Ciao <strong style="color: #daa520;">${memberName}</strong>,</p>
+        <p style="color: #ccc; line-height: 1.6;">La candidatura del tuo gruppo <strong style="color: #daa520;">"${groupName}"</strong> per la Sfida Karaoke è stata esaminata.</p>
         ${message ? `<div style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin: 15px 0;"><p style="color: #ccc; margin: 0; line-height: 1.6;"><strong>Messaggio:</strong> ${message}</p></div>` : ''}
-        <div style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin: 15px 0;">
-          <p style="color: #999; margin: 0 0 5px; font-size: 13px;">Le tue canzoni:</p>
-          <p style="color: #daa520; margin: 0;">🎵 ${reg.song_1}${reg.song_1_artist ? ` — ${reg.song_1_artist}` : ''}</p>
-          <p style="color: #daa520; margin: 5px 0 0;">🎵 ${reg.song_2}${reg.song_2_artist ? ` — ${reg.song_2_artist}` : ''}</p>
-        </div>
-        ${status === 'accepted' ? '<p style="color: #ccc; line-height: 1.6;">Ci vediamo il <strong style="color: #daa520;">7 maggio alle 20:00</strong> al <strong style="color: #daa520;">Jackie\'O</strong>, Via Boncompagni 11, Roma! 🎉</p>' : ''}
-        ${status === 'revision' ? '<p style="color: #ccc; line-height: 1.6;">Ti preghiamo di rivedere la tua candidatura e riprovare. Se hai domande, rispondi a questa email.</p>' : ''}
+        ${status === 'accepted' ? `<p style="color: #ccc; line-height: 1.6;">Ci vediamo il <strong style="color: #daa520;">7 maggio alle 19:30</strong> al <strong style="color: #daa520;">Jackie'O</strong>, Via Boncompagni 11, Roma! 🎉</p>
+        <p style="color: #ccc; line-height: 1.6;">📄 <a href="${REGOLAMENTO_URL}" style="color: #daa520;">Consulta il regolamento della serata</a></p>` : ''}
+        ${status === 'revision' ? '<p style="color: #ccc; line-height: 1.6;">Il capogruppo è stato informato. Vi preghiamo di rivedere la candidatura.</p>' : ''}
       </div>
       <div style="padding: 20px; text-align: center; border-top: 1px solid #222;">
-        <p style="color: #666; font-size: 12px; margin: 0;">Sfida Karaoke 2026 — Jackie\'O, Via Boncompagni 11, Roma</p>
+        <p style="color: #666; font-size: 12px; margin: 0;">Sfida Karaoke 2026 — Jackie'O, Via Boncompagni 11, Roma</p>
       </div>
     </div>`
   };
@@ -602,13 +665,14 @@ function buildInviteEmail(name, company, token, appUrl) {
       <p style="color: #ccc; line-height: 1.6;">Sei invitato/a alla grande <strong style="color: #daa520;">Sfida Karaoke</strong> tra <strong>Our Films</strong> e <strong>Frame by Frame</strong>!</p>
       <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <p style="color: #daa520; margin: 0 0 8px; font-weight: bold;">📅 Giovedì 7 Maggio 2026</p>
-        <p style="color: #daa520; margin: 0 0 8px; font-weight: bold;">🕗 Ore 20:00 — 24:00</p>
+        <p style="color: #daa520; margin: 0 0 8px; font-weight: bold;">🕗 Ore 19:30 — 24:00</p>
         <p style="color: #daa520; margin: 0; font-weight: bold;">📍 Jackie'O — Via Boncompagni 11, Roma</p>
       </div>
       <p style="color: #ccc; line-height: 1.6;">Partecipa come <strong>solista</strong> o in <strong>gruppo</strong> (con colleghi di ${companyName}). Scegli 2 canzoni e preparati a dare il massimo!</p>
       <div style="text-align: center; margin: 25px 0;">
         <a href="${appUrl}/r/${token}" style="display: inline-block; background: linear-gradient(135deg, #b8860b, #daa520); color: #0a0a0a; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-weight: bold; font-size: 16px;">ISCRIVITI ORA</a>
       </div>
+      <p style="color: #ccc; line-height: 1.6; text-align: center; font-size: 13px;">📄 <a href="${REGOLAMENTO_URL}" style="color: #daa520;">Consulta il regolamento</a></p>
       <p style="color: #999; text-align: center; font-size: 13px;">La sfida è aperta — fai vincere ${companyName}! 🏆</p>
     </div>
     <div style="padding: 20px; text-align: center; border-top: 1px solid #222;">
