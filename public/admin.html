@@ -1338,36 +1338,94 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
   function renderVotingPerformers() {
     const container = document.getElementById('votingPerformersList');
     if (!votingPerformers.length) {
-      container.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">Nessun artista accettato trovato. Accetta le candidature dalla tab Candidature.</p>';
+      container.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">Nessun artista (solista/gruppo) trovato.</p>';
       return;
     }
-    container.innerHTML = `
-      <div style="display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;">
-        <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
-          <input type="checkbox" id="selectAllPerformers" onchange="toggleSelectAll(this.checked)"> Seleziona tutti
-        </label>
-        <button onclick="votingBulkSelected('open')" style="margin-left:12px;padding:4px 10px;border-radius:6px;border:1px solid var(--success);background:transparent;color:var(--success);font-family:inherit;font-size:11px;cursor:pointer;">Apri selezionati</button>
-        <button onclick="votingBulkSelected('close')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--error);background:transparent;color:var(--error);font-family:inherit;font-size:11px;cursor:pointer;">Chiudi selezionati</button>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        ${votingPerformers.map((p, i) => `
-          <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;">
-            <input type="checkbox" class="performer-checkbox" data-id="${p.id}" style="flex-shrink:0;">
-            <span style="width:24px;text-align:center;color:var(--text-muted);font-size:12px;flex-shrink:0;">${p.voting_order || i+1}</span>
-            <div style="flex:1;min-width:0;">
-              <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</div>
-              <div style="font-size:11px;color:var(--text-muted);">${p.company === 'ourfilms' ? 'Our Films' : 'FBF'} &bull; ${p.type}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-              <span style="font-size:11px;color:${p.voting_open ? 'var(--success)' : 'var(--text-muted)'};">${p.voting_open ? 'APERTA' : 'CHIUSA'}</span>
-              <button onclick="toggleSingleVoting(${p.id}, ${!p.voting_open})" style="padding:6px 12px;border-radius:6px;border:none;background:${p.voting_open ? 'var(--error)' : 'var(--success)'};color:#fff;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;">
-                ${p.voting_open ? 'Chiudi' : 'Apri'}
-              </button>
-            </div>
+
+    const admitted = votingPerformers.filter(p => p.status === 'accepted');
+    const notAdmitted = votingPerformers.filter(p => p.status !== 'accepted');
+
+    let html = '';
+
+    // Non-admitted section
+    if (notAdmitted.length) {
+      html += `
+        <div style="margin-bottom:16px;padding:12px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.3);border-radius:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+            <div style="font-size:13px;font-weight:600;color:var(--warning);">Non ancora ammessi (${notAdmitted.length})</div>
+            <button onclick="admitAllToVoting()" style="padding:6px 14px;border-radius:6px;border:none;background:var(--warning);color:#000;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;">Ammetti tutti</button>
           </div>
-        `).join('')}
-      </div>
-    `;
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            ${notAdmitted.map(p => `
+              <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;">
+                <div style="flex:1;min-width:0;">
+                  <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</div>
+                  <div style="font-size:11px;color:var(--text-muted);">${p.company === 'ourfilms' ? 'Our Films' : 'FBF'} &bull; ${p.type} &bull; <span style="color:var(--warning);">${p.status}</span></div>
+                </div>
+                <button onclick="admitToVoting([${p.id}])" style="padding:6px 12px;border-radius:6px;border:none;background:var(--success);color:#fff;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;">Ammetti</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Admitted section
+    if (admitted.length) {
+      html += `
+        <div style="display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;">
+          <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+            <input type="checkbox" id="selectAllPerformers" onchange="toggleSelectAll(this.checked)"> Seleziona tutti
+          </label>
+          <button onclick="votingBulkSelected('open')" style="margin-left:12px;padding:4px 10px;border-radius:6px;border:1px solid var(--success);background:transparent;color:var(--success);font-family:inherit;font-size:11px;cursor:pointer;">Apri selezionati</button>
+          <button onclick="votingBulkSelected('close')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--error);background:transparent;color:var(--error);font-family:inherit;font-size:11px;cursor:pointer;">Chiudi selezionati</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${admitted.map((p, i) => `
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;">
+              <input type="checkbox" class="performer-checkbox" data-id="${p.id}" style="flex-shrink:0;">
+              <span style="width:24px;text-align:center;color:var(--text-muted);font-size:12px;flex-shrink:0;">${p.voting_order || i+1}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</div>
+                <div style="font-size:11px;color:var(--text-muted);">${p.company === 'ourfilms' ? 'Our Films' : 'FBF'} &bull; ${p.type}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                <span style="font-size:11px;color:${p.voting_open ? 'var(--success)' : 'var(--text-muted)'};">${p.voting_open ? 'APERTA' : 'CHIUSA'}</span>
+                <button onclick="toggleSingleVoting(${p.id}, ${!p.voting_open})" style="padding:6px 12px;border-radius:6px;border:none;background:${p.voting_open ? 'var(--error)' : 'var(--success)'};color:#fff;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;">
+                  ${p.voting_open ? 'Chiudi' : 'Apri'}
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else if (!notAdmitted.length) {
+      html = '<p style="color:var(--text-muted);font-size:13px;">Nessun artista trovato.</p>';
+    }
+
+    container.innerHTML = html;
+  }
+
+  async function admitToVoting(ids) {
+    try {
+      const res = await fetch('/api/admin/registrations/admit-voting', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+        body: JSON.stringify({ ids }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      loadVotingPerformers();
+    } catch (e) {
+      alert('Errore: ' + e.message);
+    }
+  }
+
+  function admitAllToVoting() {
+    const notAdmitted = votingPerformers.filter(p => p.status !== 'accepted');
+    if (!notAdmitted.length) return;
+    if (!confirm(`Ammettere ${notAdmitted.length} artisti alla votazione? (nessuna email verrà inviata)`)) return;
+    admitToVoting(notAdmitted.map(p => p.id));
   }
 
   function toggleSelectAll(checked) {

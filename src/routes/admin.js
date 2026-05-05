@@ -289,6 +289,25 @@ router.put('/registrations/:id/status', async (req, res) => {
   }
 });
 
+// ========== ADMIT TO VOTING (silent accept, no email) ==========
+router.put('/registrations/admit-voting', async (req, res) => {
+  const { ids } = req.body; // array of registration IDs
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'Nessun ID fornito' });
+  }
+  try {
+    const { rowCount } = await pool.query(
+      `UPDATE registrations SET status = 'accepted', updated_at = NOW()
+       WHERE id = ANY($1) AND type IN ('solista', 'gruppo')`,
+      [ids]
+    );
+    res.json({ success: true, updated: rowCount });
+  } catch (err) {
+    console.error('Admit voting error:', err);
+    res.status(500).json({ error: 'Errore nell\'ammissione' });
+  }
+});
+
 // ========== SEND BULK INVITES ==========
 router.post('/send-invites', async (req, res) => {
   const { recipients } = req.body; // array of { name, email, company }

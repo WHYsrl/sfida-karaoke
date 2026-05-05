@@ -298,7 +298,7 @@ router.get('/leaderboard', async (req, res) => {
 router.get('/admin/status', adminAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT r.id, r.type, r.contact_name, r.group_name, r.company,
+      SELECT r.id, r.type, r.status, r.contact_name, r.group_name, r.company,
         r.song_1, r.song_1_artist, r.voting_open, r.voting_order,
         COALESCE(SUM(v.score_preparation), 0) as total_preparation,
         COALESCE(SUM(v.score_performance), 0) as total_performance,
@@ -306,15 +306,16 @@ router.get('/admin/status', adminAuth, async (req, res) => {
         COUNT(v.id) as vote_count
       FROM registrations r
       LEFT JOIN votes v ON v.registration_id = r.id
-      WHERE r.status = 'accepted' AND r.type != 'pubblico'
+      WHERE r.type != 'pubblico'
       GROUP BY r.id
-      ORDER BY r.voting_order NULLS LAST, r.company, r.contact_name
+      ORDER BY r.status DESC, r.voting_order NULLS LAST, r.company, r.contact_name
     `);
 
     res.json(rows.map(r => ({
       id: r.id,
       name: r.type === 'gruppo' ? r.group_name : r.contact_name,
       type: r.type,
+      status: r.status,
       company: r.company,
       song: r.song_1,
       song_artist: r.song_1_artist,
