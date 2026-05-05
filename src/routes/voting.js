@@ -10,6 +10,37 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
 }
 
+// ========== SSE: Server-Sent Events for real-time updates ==========
+const sseClients = new Set();
+
+router.get('/events', (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no', // for nginx/render proxy
+  });
+  res.write(':\n\n'); // comment to keep connection alive
+
+  const client = { res };
+  sseClients.add(client);
+
+  // Keep-alive ping every 25s
+  const keepAlive = setInterval(() => { res.write(':\n\n'); }, 25000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    sseClients.delete(client);
+  });
+});
+
+function broadcast(event = 'update', data = {}) {
+  const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const client of sseClients) {
+    try { client.res.write(msg); } catch (e) { sseClients.delete(client); }
+  }
+}
+
 // ========== VOTER AUTH: Request OTP ==========
 router.post('/auth', async (req, res) => {
   try {
@@ -382,6 +413,7 @@ router.put('/admin/toggle', adminAuth, async (req, res) => {
         [!!open, ids]
       );
     }
+    broadcast('voting-changed', { ids, open: !!open });
     res.json({ success: true });
   } catch (err) {
     console.error('Admin voting toggle error:', err);
@@ -399,6 +431,7 @@ router.put('/admin/songs/:id', adminAuth, async (req, res) => {
        WHERE id = $5 AND type != 'pubblico'`,
       [song_1 || null, song_1_artist || null, song_2 || null, song_2_artist || null, id]
     );
+    broadcast('songs-changed', { id: parseInt(id) });
     res.json({ success: true });
   } catch (err) {
     console.error('Update songs error:', err);
@@ -456,6 +489,7 @@ router.put('/admin/timer', adminAuth, async (req, res) => {
        ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
       [ends_at || '']
     );
+    broadcast('timer-changed', { ends_at: ends_at || null });
     res.json({ success: true });
   } catch (err) {
     console.error('Timer save error:', err);
@@ -532,6 +566,7 @@ router.delete('/admin/reset-votes', adminAuth, async (req, res) => {
       `INSERT INTO app_settings (key, value) VALUES ('voting_timer_ends_at', '')
        ON CONFLICT (key) DO UPDATE SET value = '', updated_at = NOW()`
     );
+    broadcast('reset');
     res.json({ success: true, deleted: rowCount });
   } catch (err) {
     console.error('Reset votes error:', err);
@@ -552,6 +587,7 @@ router.put('/admin/show-results', adminAuth, async (req, res) => {
        ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
       [val]
     );
+    broadcast('results-changed', { value: val });
     res.json({ success: true, value: val });
   } catch (err) {
     console.error('Show results error:', err);

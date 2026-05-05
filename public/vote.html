@@ -452,14 +452,29 @@
       document.querySelectorAll('#otpInputs input').forEach(i => i.value = '');
     }
 
+    let eventSource = null;
+
     function showVotingArea() {
       document.getElementById('authEmail').classList.add('hidden');
       document.getElementById('authOtp').classList.add('hidden');
       document.getElementById('votingArea').classList.remove('hidden');
       document.getElementById('voterEmailDisplay').textContent = voterEmail;
       loadPerformers();
-      // Auto-refresh every 10 seconds
-      refreshInterval = setInterval(loadPerformers, 10000);
+      connectSSE();
+    }
+
+    function connectSSE() {
+      if (eventSource) eventSource.close();
+      eventSource = new EventSource(`${API}/events`);
+      eventSource.addEventListener('voting-changed', () => loadPerformers());
+      eventSource.addEventListener('timer-changed', () => loadPerformers());
+      eventSource.addEventListener('reset', () => loadPerformers());
+      eventSource.addEventListener('songs-changed', () => loadPerformers());
+      eventSource.onerror = () => {
+        // Reconnect after 5s on error
+        eventSource.close();
+        setTimeout(connectSSE, 5000);
+      };
     }
 
     function logout() {
@@ -467,7 +482,7 @@
       localStorage.removeItem('voter_email');
       voterToken = null;
       voterEmail = null;
-      if (refreshInterval) clearInterval(refreshInterval);
+      if (eventSource) { eventSource.close(); eventSource = null; }
       document.getElementById('votingArea').classList.add('hidden');
       document.getElementById('authEmail').classList.remove('hidden');
       document.getElementById('emailInput').value = '';
