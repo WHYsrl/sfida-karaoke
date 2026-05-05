@@ -311,7 +311,7 @@ router.get('/admin/status', adminAuth, async (req, res) => {
       ORDER BY r.status DESC, r.voting_order NULLS LAST, r.company, r.contact_name
     `);
 
-    res.json(rows.map(r => ({
+    res.json({ performers: rows.map(r => ({
       id: r.id,
       name: r.type === 'gruppo' ? r.group_name : r.contact_name,
       type: r.type,
@@ -325,7 +325,7 @@ router.get('/admin/status', adminAuth, async (req, res) => {
       total_performance: parseInt(r.total_performance),
       total_score: parseInt(r.total_score),
       vote_count: parseInt(r.vote_count),
-    })));
+    })) });
   } catch (err) {
     console.error('Admin voting status error:', err);
     res.status(500).json({ error: 'Errore nel recupero stato votazioni' });
