@@ -1462,16 +1462,19 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     startTimer(parseInt(minutes));
   }
 
-  function startTimer(minutes) {
+  async function startTimer(minutes) {
     // Open all performers
-    votingBulkAction('open');
+    await votingBulkAction('open');
     votingTimerEnd = Date.now() + minutes * 60 * 1000;
+    // Save timer to backend for projector
+    const endsAt = new Date(votingTimerEnd).toISOString();
+    await voteApi('/timer', { method: 'PUT', body: JSON.stringify({ ends_at: endsAt }) });
     document.getElementById('votingTimer').style.display = 'block';
     updateTimerDisplay();
     votingTimerInterval = setInterval(() => {
       updateTimerDisplay();
       if (Date.now() >= votingTimerEnd) {
-        cancelTimer();
+        cancelTimer(true);
         votingBulkAction('close');
         alert('Tempo scaduto! Votazioni chiuse.');
       }
@@ -1485,11 +1488,14 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     document.getElementById('timerDisplay').textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
   }
 
-  function cancelTimer() {
+  async function cancelTimer(skipSync) {
     if (votingTimerInterval) clearInterval(votingTimerInterval);
     votingTimerInterval = null;
     votingTimerEnd = null;
     document.getElementById('votingTimer').style.display = 'none';
+    if (!skipSync) {
+      await voteApi('/timer', { method: 'PUT', body: JSON.stringify({ ends_at: null }) });
+    }
   }
 
   async function loadVotingLeaderboard() {

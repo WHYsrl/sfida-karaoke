@@ -371,16 +371,63 @@ router.put('/admin/order', adminAuth, async (req, res) => {
 router.get('/admin/detailed-results', adminAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT v.registration_id, v.voter_email, v.score_preparation, v.score_performance,
-        v.created_at, r.contact_name, r.group_name, r.type, r.company
-      FROM votes v
-      JOIN registrations r ON r.id = v.registration_id
-      ORDER BY v.registration_id, v.created_at
+      SELECT r.id as registration_id,
+        CASE WHEN r.type = 'gruppo' THEN r.group_name ELSE r.contact_name END as name,
+        r.type, r.company,
+        ROUND(AVG(v.score_preparation)::numeric, 2) as avg_preparation,
+        ROUND(AVG(v.score_performance)::numeric, 2) as avg_performance,
+        ROUND((AVG(v.score_preparation) + AVG(v.score_performance))::numeric, 2) as total_avg,
+        COUNT(v.id) as vote_count
+      FROM registrations r
+      INNER JOIN votes v ON v.registration_id = r.id
+      GROUP BY r.id
+      ORDER BY total_avg DESC NULLS LAST
     `);
-    res.json(rows);
+    res.json({ results: rows });
   } catch (err) {
     console.error('Detailed results error:', err);
     res.status(500).json({ error: 'Errore nel recupero risultati dettagliati' });
+  }
+});
+
+// ========== TIMER: save/get timer state for projector ==========
+router.put('/admin/timer', adminAuth, async (req, res) => {
+  try {
+    const { ends_at } = req.body; // ISO string or null to cancel
+    await pool.query(
+      `INSERT INTO app_settings (key, value) VALUES ('voting_timer_ends_at', $1)
+       ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
+      [ends_at || '']
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Timer save error:', err);
+    res.status(500).json({ error: 'Errore salvataggio timer' });
+  }
+});
+
+// ========== PUBLIC: voting status for projector ==========
+router.get('/projector-status', async (req, res) => {
+  try {
+    // Check if any voting is open
+    const { rows: openRows } = await pool.query(
+      `SELECT COUNT(*) as open_count FROM registrations WHERE voting_open = true AND type != 'pubblico'`
+    );
+    // Get timer
+    const { rows: timerRows } = await pool.query(
+      `SELECT value FROM app_settings WHERE key = 'voting_timer_ends_at'`
+    );
+    const timerEndsAt = timerRows.length && timerRows[0].value ? timerRows[0].value : null;
+    const anyOpen = parseInt(openRows[0].open_count) > 0;
+
+    res.json({
+      voting_open: anyOpen,
+      open_count: parseInt(openRows[0].open_count),
+      timer_ends_at: timerEndsAt
+    });
+  } catch (err) {
+    console.error('Projector status error:', err);
+    res.status(500).json({ error: 'Errore stato proiettore' });
   }
 });
 
@@ -391,19 +438,13 @@ router.get('/admin/voter-stats', adminAuth, async (req, res) => {
       'SELECT COUNT(DISTINCT LOWER(voter_email)) as total_voters FROM votes'
     );
     const { rows: totalVotes } = await pool.query('SELECT COUNT(*) as total FROM votes');
-    const { rows: totalEligible } = await pool.query(`
-      SELECT COUNT(*) as total FROM (
-        SELECT contact_email as email FROM registrations WHERE status = 'accepted'
-        UNION
-        SELECT gm.email FROM group_members gm JOIN registrations r ON r.id = gm.registration_id WHERE r.status = 'accepted' AND gm.email IS NOT NULL AND gm.email != ''
-        UNION
-        SELECT contact_email as email FROM registrations WHERE type = 'pubblico'
-      ) sub
-    `);
+    const { rows: voters } = await pool.query(
+      'SELECT LOWER(voter_email) as email, COUNT(*) as vote_count FROM votes GROUP BY LOWER(voter_email) ORDER BY vote_count DESC'
+    );
     res.json({
-      unique_voters: parseInt(voterCount.rows ? voterCount.rows[0]?.total_voters : voterCount[0]?.total_voters || 0),
-      total_votes: parseInt(totalVotes.rows ? totalVotes.rows[0]?.total : totalVotes[0]?.total || 0),
-      total_eligible: parseInt(totalEligible.rows ? totalEligible.rows[0]?.total : totalEligible[0]?.total || 0),
+      total_voters: parseInt(voterCount[0]?.total_voters || 0),
+      total_votes: parseInt(totalVotes[0]?.total || 0),
+      voters: voters,
     });
   } catch (err) {
     console.error('Voter stats error:', err);
