@@ -496,7 +496,19 @@
         return;
       }
 
-      container.innerHTML = performers.map(p => {
+      // Sort: open & not voted & not self first, then voted/self, then closed
+      const sorted = [...performers].sort((a, b) => {
+        const priority = (p) => {
+          const voted = !!myVotes[p.id];
+          if (p.voting_open && !voted && !p.is_self) return 0; // open to vote
+          if (voted) return 1; // already voted
+          if (p.is_self) return 2; // self
+          return 3; // closed
+        };
+        return priority(a) - priority(b);
+      });
+
+      container.innerHTML = sorted.map(p => {
         const voted = myVotes[p.id];
         const isSelf = p.is_self;
         const isOpen = p.voting_open;
