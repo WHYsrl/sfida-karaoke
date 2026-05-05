@@ -472,9 +472,9 @@
         });
         if (res.status === 401) { logout(); return; }
         const data = await res.json();
-        performers = data.performers;
+        performers = Array.isArray(data) ? data : (data.performers || []);
         myVotes = {};
-        data.my_votes.forEach(v => { myVotes[v.registration_id] = v; });
+        performers.forEach(p => { if (p.my_vote) myVotes[p.id] = p.my_vote; });
         renderPerformers();
       } catch (e) {
         console.error('Load performers error:', e);
@@ -510,7 +510,7 @@
           <div class="performer-card ${cardClass}" data-id="${p.id}">
             <div class="performer-name">${escHtml(p.name)}</div>
             <div class="performer-meta">${escHtml(p.company)} &bull; ${p.type === 'solista' ? 'Solista' : 'Gruppo'}</div>
-            ${p.current_song ? `<div class="performer-song">"${escHtml(p.current_song)}"</div>` : ''}
+            ${p.song ? `<div class="performer-song">"${escHtml(p.song)}"</div>` : ''}
             ${statusHtml}
           </div>
         `;
