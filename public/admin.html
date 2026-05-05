@@ -322,6 +322,7 @@
     <button onclick="showTab('songs', this)">Canzoni</button>
     <button onclick="showTab('email-tracking', this)">Email</button>
     <button onclick="showTab('send-invites', this)">Invita</button>
+    <button onclick="showTab('voting', this)">Votazioni</button>
   </div>
 </header>
 
@@ -501,6 +502,47 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
       </div>
     </div>
   </div>
+
+  <!-- ===== TAB: VOTAZIONI ===== -->
+  <div class="tab-content" id="tab-voting">
+    <!-- Bulk actions -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <span>Gestione Votazioni</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="votingBulkAction('open')" style="padding:8px 16px;border-radius:8px;border:none;background:var(--success);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">Apri tutte</button>
+          <button onclick="votingBulkAction('close')" style="padding:8px 16px;border-radius:8px;border:none;background:var(--error);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">Chiudi tutte</button>
+          <button onclick="showTimerModal()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--warning);color:#000;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">Timer</button>
+        </div>
+      </div>
+      <div id="votingTimer" style="display:none;margin-top:12px;padding:12px;background:rgba(245,158,11,0.1);border:1px solid var(--warning);border-radius:8px;text-align:center;">
+        <div style="font-size:12px;color:var(--warning);margin-bottom:4px;">VOTAZIONE APERTA — CHIUSURA TRA:</div>
+        <div id="timerDisplay" style="font-size:2rem;font-weight:700;color:var(--warning);">--:--</div>
+        <button onclick="cancelTimer()" style="margin-top:8px;padding:6px 12px;border-radius:6px;border:1px solid var(--warning);background:transparent;color:var(--warning);font-family:inherit;font-size:11px;cursor:pointer;">Annulla timer</button>
+      </div>
+    </div>
+
+    <!-- Performer voting status -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">Artisti in gara</div>
+      <div id="votingPerformersList" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- Live results -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Classifica Live</span>
+        <a href="leaderboard.html" target="_blank" style="font-size:12px;color:var(--info);text-decoration:none;">Apri proiettore &rarr;</a>
+      </div>
+      <div id="votingLeaderboard" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- Voter stats -->
+    <div class="card">
+      <div class="card-title">Statistiche Votanti</div>
+      <div id="voterStats" style="margin-top:12px;color:var(--text-muted);font-size:13px;">Caricamento...</div>
+    </div>
+  </div>
 </div>
 
 <!-- STATUS MODAL -->
@@ -604,6 +646,7 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     if (tab === 'groups') loadGroups();
     if (tab === 'songs') loadSongs();
     if (tab === 'email-tracking') loadEmailTracking();
+    if (tab === 'voting') loadVotingTab();
   }
 
   // ===== DASHBOARD =====
@@ -1265,6 +1308,193 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
       <div class="ok">✅ ${data.sent} email inviate con successo</div>
       ${data.errors > 0 ? `<div class="err">❌ ${data.errors} errori</div>` : ''}
       ${data.details?.filter(d => d.status === 'error').map(d => `<div class="err">→ ${d.email}: ${d.error}</div>`).join('') || ''}
+    `;
+  }
+
+  // ===== VOTING MANAGEMENT =====
+  let votingPerformers = [];
+  let votingTimerInterval = null;
+  let votingTimerEnd = null;
+
+  function voteApi(path, opts = {}) {
+    return fetch(`/api/vote/admin${path}`, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword, ...(opts.headers || {}) },
+    }).then(r => r.json());
+  }
+
+  async function loadVotingTab() {
+    await loadVotingPerformers();
+    await loadVotingLeaderboard();
+    await loadVoterStats();
+  }
+
+  async function loadVotingPerformers() {
+    const data = await voteApi('/status');
+    votingPerformers = data.performers || [];
+    renderVotingPerformers();
+  }
+
+  function renderVotingPerformers() {
+    const container = document.getElementById('votingPerformersList');
+    if (!votingPerformers.length) {
+      container.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">Nessun artista accettato trovato. Accetta le candidature dalla tab Candidature.</p>';
+      return;
+    }
+    container.innerHTML = `
+      <div style="display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;">
+        <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+          <input type="checkbox" id="selectAllPerformers" onchange="toggleSelectAll(this.checked)"> Seleziona tutti
+        </label>
+        <button onclick="votingBulkSelected('open')" style="margin-left:12px;padding:4px 10px;border-radius:6px;border:1px solid var(--success);background:transparent;color:var(--success);font-family:inherit;font-size:11px;cursor:pointer;">Apri selezionati</button>
+        <button onclick="votingBulkSelected('close')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--error);background:transparent;color:var(--error);font-family:inherit;font-size:11px;cursor:pointer;">Chiudi selezionati</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${votingPerformers.map((p, i) => `
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;">
+            <input type="checkbox" class="performer-checkbox" data-id="${p.id}" style="flex-shrink:0;">
+            <span style="width:24px;text-align:center;color:var(--text-muted);font-size:12px;flex-shrink:0;">${p.voting_order || i+1}</span>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</div>
+              <div style="font-size:11px;color:var(--text-muted);">${p.company === 'ourfilms' ? 'Our Films' : 'FBF'} &bull; ${p.type}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+              <span style="font-size:11px;color:${p.voting_open ? 'var(--success)' : 'var(--text-muted)'};">${p.voting_open ? 'APERTA' : 'CHIUSA'}</span>
+              <button onclick="toggleSingleVoting(${p.id}, ${!p.voting_open})" style="padding:6px 12px;border-radius:6px;border:none;background:${p.voting_open ? 'var(--error)' : 'var(--success)'};color:#fff;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;">
+                ${p.voting_open ? 'Chiudi' : 'Apri'}
+              </button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function toggleSelectAll(checked) {
+    document.querySelectorAll('.performer-checkbox').forEach(cb => cb.checked = checked);
+  }
+
+  function getSelectedIds() {
+    return Array.from(document.querySelectorAll('.performer-checkbox:checked')).map(cb => parseInt(cb.dataset.id));
+  }
+
+  async function toggleSingleVoting(id, open) {
+    await voteApi('/toggle', { method: 'PUT', body: JSON.stringify({ ids: [id], open }) });
+    loadVotingPerformers();
+  }
+
+  async function votingBulkAction(action) {
+    const ids = votingPerformers.map(p => p.id);
+    const open = action === 'open';
+    await voteApi('/toggle', { method: 'PUT', body: JSON.stringify({ ids, open }) });
+    loadVotingPerformers();
+  }
+
+  async function votingBulkSelected(action) {
+    const ids = getSelectedIds();
+    if (!ids.length) return alert('Seleziona almeno un artista');
+    const open = action === 'open';
+    await voteApi('/toggle', { method: 'PUT', body: JSON.stringify({ ids, open }) });
+    loadVotingPerformers();
+  }
+
+  function showTimerModal() {
+    const minutes = prompt('Minuti per la votazione:', '10');
+    if (!minutes || isNaN(minutes) || parseInt(minutes) <= 0) return;
+    startTimer(parseInt(minutes));
+  }
+
+  function startTimer(minutes) {
+    // Open all performers
+    votingBulkAction('open');
+    votingTimerEnd = Date.now() + minutes * 60 * 1000;
+    document.getElementById('votingTimer').style.display = 'block';
+    updateTimerDisplay();
+    votingTimerInterval = setInterval(() => {
+      updateTimerDisplay();
+      if (Date.now() >= votingTimerEnd) {
+        cancelTimer();
+        votingBulkAction('close');
+        alert('Tempo scaduto! Votazioni chiuse.');
+      }
+    }, 1000);
+  }
+
+  function updateTimerDisplay() {
+    const remaining = Math.max(0, votingTimerEnd - Date.now());
+    const mins = Math.floor(remaining / 60000);
+    const secs = Math.floor((remaining % 60000) / 1000);
+    document.getElementById('timerDisplay').textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  }
+
+  function cancelTimer() {
+    if (votingTimerInterval) clearInterval(votingTimerInterval);
+    votingTimerInterval = null;
+    votingTimerEnd = null;
+    document.getElementById('votingTimer').style.display = 'none';
+  }
+
+  async function loadVotingLeaderboard() {
+    const data = await voteApi('/detailed-results');
+    const results = data.results || [];
+    const container = document.getElementById('votingLeaderboard');
+    if (!results.length) {
+      container.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">Nessun voto ancora ricevuto.</p>';
+      return;
+    }
+    container.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);color:var(--text-muted);font-size:11px;text-transform:uppercase;">
+            <th style="padding:8px;text-align:left;">#</th>
+            <th style="padding:8px;text-align:left;">Artista</th>
+            <th style="padding:8px;text-align:center;">Prep.</th>
+            <th style="padding:8px;text-align:center;">Perf.</th>
+            <th style="padding:8px;text-align:center;">Totale</th>
+            <th style="padding:8px;text-align:center;">Voti</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${results.map((r, i) => `
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:8px;font-weight:700;color:${i < 3 ? 'var(--gold)' : 'var(--text-muted)'};">${i+1}</td>
+              <td style="padding:8px;">
+                <strong>${esc(r.name)}</strong>
+                <span style="color:var(--text-muted);font-size:11px;margin-left:6px;">${r.company === 'ourfilms' ? 'OF' : 'FBF'}</span>
+              </td>
+              <td style="padding:8px;text-align:center;">${r.avg_preparation ? parseFloat(r.avg_preparation).toFixed(1) : '-'}</td>
+              <td style="padding:8px;text-align:center;">${r.avg_performance ? parseFloat(r.avg_performance).toFixed(1) : '-'}</td>
+              <td style="padding:8px;text-align:center;font-weight:700;color:var(--gold);">${r.total_avg ? parseFloat(r.total_avg).toFixed(1) : '-'}</td>
+              <td style="padding:8px;text-align:center;color:var(--text-muted);">${r.vote_count}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  async function loadVoterStats() {
+    const data = await voteApi('/voter-stats');
+    const container = document.getElementById('voterStats');
+    container.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(120px,1fr));gap:8px;margin-bottom:12px;">
+        <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:1.5rem;font-weight:700;color:var(--gold);">${data.total_voters || 0}</div>
+          <div style="font-size:11px;color:var(--text-muted);">Votanti</div>
+        </div>
+        <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:1.5rem;font-weight:700;color:var(--gold);">${data.total_votes || 0}</div>
+          <div style="font-size:11px;color:var(--text-muted);">Voti totali</div>
+        </div>
+      </div>
+      ${data.voters && data.voters.length ? `
+        <details style="margin-top:8px;">
+          <summary style="cursor:pointer;color:var(--text-muted);font-size:12px;">Dettaglio votanti (${data.voters.length})</summary>
+          <div style="margin-top:8px;max-height:200px;overflow-y:auto;">
+            ${data.voters.map(v => `<div style="padding:4px 0;font-size:12px;border-bottom:1px solid var(--border);">${esc(v.email)} — <span style="color:var(--text-muted);">${v.vote_count} voti</span></div>`).join('')}
+          </div>
+        </details>
+      ` : ''}
     `;
   }
 </script>

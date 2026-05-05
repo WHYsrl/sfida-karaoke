@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Vota - Sfida Karaoke 2026</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      color: #fff;
+      padding: 16px;
+      padding-bottom: 100px;
+    }
+    .container { max-width: 480px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 20px 0;
+    }
+    .header h1 {
+      font-size: 1.6rem;
+      background: linear-gradient(90deg, #e94560, #ff6b6b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+    .header p { color: #aaa; font-size: 0.85rem; }
+
+    /* Auth Section */
+    .auth-section {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 16px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .auth-section h2 {
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .input-group { margin-bottom: 16px; }
+    .input-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-group input:focus {
+      border-color: #e94560;
+    }
+    .input-group input::placeholder { color: #666; }
+
+    .otp-inputs {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin: 16px 0;
+    }
+    .otp-inputs input {
+      width: 48px;
+      height: 56px;
+      text-align: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      outline: none;
+    }
+    .otp-inputs input:focus { border-color: #e94560; }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #e94560, #ff6b6b);
+      color: #fff;
+    }
+    .btn-primary:hover { transform: scale(1.02); }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      transform: none;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+      margin-top: 10px;
+    }
+
+    /* Voting Section */
+    .voting-section { margin-top: 20px; }
+    .voter-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+    }
+    .voter-info .email { color: #e94560; }
+    .voter-info .logout {
+      color: #aaa;
+      cursor: pointer;
+      text-decoration: underline;
+      font-size: 0.8rem;
+    }
+
+    /* Performer Card */
+    .performer-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: all 0.3s;
+    }
+    .performer-card.closed {
+      opacity: 0.5;
+    }
+    .performer-card.voted {
+      border-color: #4ecdc4;
+    }
+    .performer-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .performer-meta {
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-bottom: 12px;
+    }
+    .performer-song {
+      font-size: 0.85rem;
+      color: #ccc;
+      font-style: italic;
+      margin-bottom: 16px;
+    }
+    .voting-closed-label {
+      text-align: center;
+      color: #ff6b6b;
+      font-size: 0.85rem;
+      padding: 8px;
+      background: rgba(233,69,96,0.1);
+      border-radius: 8px;
+    }
+    .voted-label {
+      text-align: center;
+      color: #4ecdc4;
+      font-size: 0.85rem;
+      padding: 8px;
+      background: rgba(78,205,196,0.1);
+      border-radius: 8px;
+    }
+    .self-vote-label {
+      text-align: center;
+      color: #ffa500;
+      font-size: 0.85rem;
+      padding: 8px;
+      background: rgba(255,165,0,0.1);
+      border-radius: 8px;
+    }
+
+    /* Star Rating */
+    .rating-section { margin-bottom: 14px; }
+    .rating-label {
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stars {
+      display: flex;
+      gap: 6px;
+    }
+    .star {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .star:hover { transform: scale(1.15); }
+    .star.active { transform: scale(1.1); }
+    .star.zero {
+      font-size: 0.9rem;
+      color: #666;
+      border: 1px solid rgba(255,255,255,0.2);
+      width: 40px;
+    }
+    .star.zero.active {
+      color: #ff6b6b;
+      border-color: #ff6b6b;
+    }
+
+    .submit-vote-btn {
+      margin-top: 12px;
+      padding: 12px;
+      font-size: 0.9rem;
+    }
+
+    /* Messages */
+    .message {
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin: 12px 0;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+    .message.error {
+      background: rgba(233,69,96,0.15);
+      color: #ff6b6b;
+      border: 1px solid rgba(233,69,96,0.3);
+    }
+    .message.success {
+      background: rgba(78,205,196,0.15);
+      color: #4ecdc4;
+      border: 1px solid rgba(78,205,196,0.3);
+    }
+    .message.info {
+      background: rgba(100,149,237,0.15);
+      color: #6495ed;
+      border: 1px solid rgba(100,149,237,0.3);
+    }
+
+    /* No performers */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #aaa;
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+
+    /* Loading */
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Leaderboard link */
+    .leaderboard-link {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      color: #6495ed;
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+    .leaderboard-link:hover { text-decoration: underline; }
+
+    /* Hide sections */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Sfida Karaoke 2026</h1>
+      <p>Jackie'O &bull; 7 Maggio 2026</p>
+    </div>
+
+    <!-- Auth: Email -->
+    <div id="authEmail" class="auth-section">
+      <h2>Accedi per votare</h2>
+      <div class="input-group">
+        <label>La tua email</label>
+        <input type="email" id="emailInput" placeholder="nome@esempio.it" autocomplete="email" inputmode="email">
+      </div>
+      <div id="authEmailMsg"></div>
+      <button class="btn btn-primary" id="sendOtpBtn" onclick="sendOtp()">Invia codice di verifica</button>
+    </div>
+
+    <!-- Auth: OTP -->
+    <div id="authOtp" class="auth-section hidden">
+      <h2>Inserisci il codice</h2>
+      <p style="text-align:center; color:#aaa; font-size:0.85rem; margin-bottom:12px;">
+        Controlla la tua email <span id="otpEmailDisplay" style="color:#e94560"></span>
+      </p>
+      <div class="otp-inputs" id="otpInputs">
+        <input type="tel" maxlength="1" data-idx="0">
+        <input type="tel" maxlength="1" data-idx="1">
+        <input type="tel" maxlength="1" data-idx="2">
+        <input type="tel" maxlength="1" data-idx="3">
+        <input type="tel" maxlength="1" data-idx="4">
+        <input type="tel" maxlength="1" data-idx="5">
+      </div>
+      <div id="authOtpMsg"></div>
+      <button class="btn btn-primary" id="verifyOtpBtn" onclick="verifyOtp()">Verifica</button>
+      <button class="btn btn-secondary" onclick="backToEmail()">Cambia email</button>
+    </div>
+
+    <!-- Voting Area -->
+    <div id="votingArea" class="voting-section hidden">
+      <div class="voter-info">
+        <span class="email" id="voterEmailDisplay"></span>
+        <span class="logout" onclick="logout()">Esci</span>
+      </div>
+      <div id="performersList"></div>
+      <a href="leaderboard.html" class="leaderboard-link" target="_blank">Classifica live &rarr;</a>
+    </div>
+  </div>
+
+  <script>
+    const API = '/api/vote';
+    let voterToken = localStorage.getItem('voter_token');
+    let voterEmail = localStorage.getItem('voter_email');
+    let currentEmail = '';
+    let performers = [];
+    let myVotes = {};
+    let refreshInterval = null;
+
+    // Check if already authenticated
+    if (voterToken && voterEmail) {
+      showVotingArea();
+    }
+
+    // OTP input auto-advance
+    document.querySelectorAll('#otpInputs input').forEach((inp, i, arr) => {
+      inp.addEventListener('input', () => {
+        if (inp.value && i < 5) arr[i+1].focus();
+      });
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !inp.value && i > 0) arr[i-1].focus();
+      });
+    });
+
+    async function sendOtp() {
+      const email = document.getElementById('emailInput').value.trim().toLowerCase();
+      if (!email || !email.includes('@')) {
+        showMsg('authEmailMsg', 'Inserisci un indirizzo email valido', 'error');
+        return;
+      }
+      currentEmail = email;
+      const btn = document.getElementById('sendOtpBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Invio in corso...';
+
+      try {
+        const res = await fetch(`${API}/auth`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Errore');
+
+        document.getElementById('authEmail').classList.add('hidden');
+        document.getElementById('authOtp').classList.remove('hidden');
+        document.getElementById('otpEmailDisplay').textContent = email;
+        document.querySelectorAll('#otpInputs input')[0].focus();
+      } catch (e) {
+        showMsg('authEmailMsg', e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Invia codice di verifica';
+      }
+    }
+
+    async function verifyOtp() {
+      const inputs = document.querySelectorAll('#otpInputs input');
+      const code = Array.from(inputs).map(i => i.value).join('');
+      if (code.length !== 6) {
+        showMsg('authOtpMsg', 'Inserisci tutti i 6 numeri', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('verifyOtpBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Verifica...';
+
+      try {
+        const res = await fetch(`${API}/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: currentEmail, code })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Codice non valido');
+
+        voterToken = data.token;
+        voterEmail = currentEmail;
+        localStorage.setItem('voter_token', voterToken);
+        localStorage.setItem('voter_email', voterEmail);
+        showVotingArea();
+      } catch (e) {
+        showMsg('authOtpMsg', e.message, 'error');
+        inputs.forEach(i => i.value = '');
+        inputs[0].focus();
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Verifica';
+      }
+    }
+
+    function backToEmail() {
+      document.getElementById('authOtp').classList.add('hidden');
+      document.getElementById('authEmail').classList.remove('hidden');
+      document.querySelectorAll('#otpInputs input').forEach(i => i.value = '');
+    }
+
+    function showVotingArea() {
+      document.getElementById('authEmail').classList.add('hidden');
+      document.getElementById('authOtp').classList.add('hidden');
+      document.getElementById('votingArea').classList.remove('hidden');
+      document.getElementById('voterEmailDisplay').textContent = voterEmail;
+      loadPerformers();
+      // Auto-refresh every 10 seconds
+      refreshInterval = setInterval(loadPerformers, 10000);
+    }
+
+    function logout() {
+      localStorage.removeItem('voter_token');
+      localStorage.removeItem('voter_email');
+      voterToken = null;
+      voterEmail = null;
+      if (refreshInterval) clearInterval(refreshInterval);
+      document.getElementById('votingArea').classList.add('hidden');
+      document.getElementById('authEmail').classList.remove('hidden');
+      document.getElementById('emailInput').value = '';
+    }
+
+    async function loadPerformers() {
+      try {
+        const res = await fetch(`${API}/performers`, {
+          headers: { 'X-Voter-Token': voterToken }
+        });
+        if (res.status === 401) { logout(); return; }
+        const data = await res.json();
+        performers = data.performers;
+        myVotes = {};
+        data.my_votes.forEach(v => { myVotes[v.registration_id] = v; });
+        renderPerformers();
+      } catch (e) {
+        console.error('Load performers error:', e);
+      }
+    }
+
+    function renderPerformers() {
+      const container = document.getElementById('performersList');
+      if (!performers.length) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">🎤</div><p>Nessun artista in gara al momento.<br>Attendi l'apertura delle votazioni.</p></div>`;
+        return;
+      }
+
+      container.innerHTML = performers.map(p => {
+        const voted = myVotes[p.id];
+        const isSelf = p.is_self;
+        const isOpen = p.voting_open;
+
+        let statusHtml = '';
+        if (isSelf) {
+          statusHtml = `<div class="self-vote-label">Non puoi votare te stesso</div>`;
+        } else if (voted) {
+          statusHtml = `<div class="voted-label">Votato: Preparazione ${voted.score_preparation}/5 &bull; Performance ${voted.score_performance}/5</div>`;
+        } else if (!isOpen) {
+          statusHtml = `<div class="voting-closed-label">Votazione non ancora aperta</div>`;
+        } else {
+          statusHtml = buildRatingUI(p.id);
+        }
+
+        const cardClass = isSelf ? 'closed' : (voted ? 'voted' : (!isOpen ? 'closed' : ''));
+
+        return `
+          <div class="performer-card ${cardClass}" data-id="${p.id}">
+            <div class="performer-name">${escHtml(p.name)}</div>
+            <div class="performer-meta">${escHtml(p.company)} &bull; ${p.type === 'solista' ? 'Solista' : 'Gruppo'}</div>
+            ${p.current_song ? `<div class="performer-song">"${escHtml(p.current_song)}"</div>` : ''}
+            ${statusHtml}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function buildRatingUI(performerId) {
+      return `
+        <div class="rating-section">
+          <div class="rating-label">Preparazione</div>
+          <div class="stars" id="stars-prep-${performerId}">
+            ${buildStars(performerId, 'prep')}
+          </div>
+        </div>
+        <div class="rating-section">
+          <div class="rating-label">Performance</div>
+          <div class="stars" id="stars-perf-${performerId}">
+            ${buildStars(performerId, 'perf')}
+          </div>
+        </div>
+        <button class="btn btn-primary submit-vote-btn" id="submit-${performerId}" onclick="castVote(${performerId})">Conferma voto</button>
+        <div id="vote-msg-${performerId}"></div>
+      `;
+    }
+
+    function buildStars(performerId, type) {
+      let html = `<div class="star zero" data-performer="${performerId}" data-type="${type}" data-value="0" onclick="setRating(${performerId},'${type}',0)">0</div>`;
+      for (let i = 1; i <= 5; i++) {
+        html += `<div class="star" data-performer="${performerId}" data-type="${type}" data-value="${i}" onclick="setRating(${performerId},'${type}',${i})">&#9734;</div>`;
+      }
+      return html;
+    }
+
+    const ratings = {}; // { performerId: { prep: N, perf: N } }
+
+    function setRating(performerId, type, value) {
+      if (!ratings[performerId]) ratings[performerId] = { prep: null, perf: null };
+      ratings[performerId][type] = value;
+
+      // Update stars visual
+      const container = document.getElementById(`stars-${type}-${performerId}`);
+      container.querySelectorAll('.star').forEach(s => {
+        const v = parseInt(s.dataset.value);
+        if (v === 0) {
+          s.classList.toggle('active', value === 0);
+        } else {
+          s.classList.toggle('active', v <= value);
+          s.innerHTML = v <= value ? '&#9733;' : '&#9734;';
+        }
+      });
+    }
+
+    async function castVote(performerId) {
+      const r = ratings[performerId];
+      if (!r || r.prep === null || r.perf === null) {
+        showMsg(`vote-msg-${performerId}`, 'Seleziona un voto per entrambe le categorie', 'error');
+        return;
+      }
+
+      const btn = document.getElementById(`submit-${performerId}`);
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Invio...';
+
+      try {
+        const res = await fetch(`${API}/cast`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Voter-Token': voterToken
+          },
+          body: JSON.stringify({
+            registration_id: performerId,
+            score_preparation: r.prep,
+            score_performance: r.perf
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Errore');
+
+        // Refresh to show voted state
+        myVotes[performerId] = {
+          registration_id: performerId,
+          score_preparation: r.prep,
+          score_performance: r.perf
+        };
+        renderPerformers();
+      } catch (e) {
+        showMsg(`vote-msg-${performerId}`, e.message, 'error');
+        btn.disabled = false;
+        btn.textContent = 'Conferma voto';
+      }
+    }
+
+    function showMsg(containerId, text, type) {
+      const el = document.getElementById(containerId);
+      if (el) {
+        el.innerHTML = `<div class="message ${type}">${escHtml(text)}</div>`;
+        setTimeout(() => { el.innerHTML = ''; }, 5000);
+      }
+    }
+
+    function escHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Enter key handlers
+    document.getElementById('emailInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendOtp();
+    });
+  </script>
+</body>
+</html>

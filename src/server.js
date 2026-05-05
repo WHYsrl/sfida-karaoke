@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const registrationRoutes = require('./routes/registration');
 const adminRoutes = require('./routes/admin');
 const webhookRoutes = require('./routes/webhook');
+const votingRoutes = require('./routes/voting');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,6 +38,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api/register', registrationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/webhook', webhookRoutes);
+app.use('/api/vote', votingRoutes);
 
 // Landing page with tracking pixel redirect
 app.get('/r/:token', async (req, res) => {
@@ -97,7 +99,26 @@ async function startServer() {
       value TEXT NOT NULL,
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )`);
-    console.log('✅ Database schema verified');
+    // Voting system migrations
+    await pool.query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS voting_open BOOLEAN DEFAULT false`);
+    await pool.query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS voting_order INT`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS voter_tokens (
+      id SERIAL PRIMARY KEY,
+      email VARCHAR(255) NOT NULL,
+      token UUID NOT NULL DEFAULT gen_random_uuid(),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '24 hours')
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS votes (
+      id SERIAL PRIMARY KEY,
+      voter_email VARCHAR(255) NOT NULL,
+      registration_id INT NOT NULL REFERENCES registrations(id),
+      score_preparation INT NOT NULL CHECK (score_preparation >= 0 AND score_preparation <= 5),
+      score_performance INT NOT NULL CHECK (score_performance >= 0 AND score_performance <= 5),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(voter_email, registration_id)
+    )`);
+    console.log('✅ Database schema verified (incl. voting)');
   } catch (e) {
     console.warn('⚠️ Migration check skipped:', e.message);
   }

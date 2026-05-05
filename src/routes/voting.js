@@ -1,0 +1,413 @@
+const express = require('express');
+const router = express.Router();
+const pool = require('../db');
+const { Resend } = require('resend');
+const { v4: uuidv4 } = require('uuid');
+const { adminAuth } = require('../middleware/auth');
+
+function getResend() {
+  if (!process.env.RESEND_API_KEY) return null;
+  return new Resend(process.env.RESEND_API_KEY);
+}
+
+// ========== VOTER AUTH: Request OTP ==========
+router.post('/auth', async (req, res) => {
+  try {
+    const email = (req.body.email || '').trim().toLowerCase();
+    if (!email) return res.status(400).json({ error: 'Email obbligatoria' });
+
+    // Check the voter is a registered participant (contact or group member)
+    const { rows: asContact } = await pool.query(
+      "SELECT id FROM registrations WHERE LOWER(contact_email) = $1 AND status = 'accepted'", [email]
+    );
+    const { rows: asMember } = await pool.query(
+      `SELECT gm.id FROM group_members gm
+       JOIN registrations r ON r.id = gm.registration_id
+       WHERE LOWER(gm.email) = $1 AND r.status = 'accepted'`, [email]
+    );
+    // Also check pubblico
+    const { rows: asPubblico } = await pool.query(
+      "SELECT id FROM registrations WHERE LOWER(contact_email) = $1 AND type = 'pubblico'", [email]
+    );
+
+    if (asContact.length === 0 && asMember.length === 0 && asPubblico.length === 0) {
+      return res.status(404).json({ error: 'Nessuna registrazione trovata per questa email. Devi essere registrato per votare.' });
+    }
+
+    // Generate 6-digit OTP
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    await pool.query(
+      `INSERT INTO otp_codes (email, code, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '30 minutes')`,
+      [email, code]
+    );
+
+    // Send OTP via email
+    const resend = getResend();
+    if (resend) {
+      await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL || 'Sfida Karaoke <karaoke@yourdomain.com>',
+        to: [email],
+        subject: 'Il tuo codice per votare — Sfida Karaoke',
+        html: `
+        <div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:480px;margin:0 auto;background:#0c0c0e;color:#e8e6e1;border-radius:12px;overflow:hidden;">
+          <div style="background:#c9a84c;padding:24px;text-align:center;">
+            <h1 style="margin:0;font-size:20px;color:#0c0c0e;font-weight:600;">Sfida Karaoke — Vota!</h1>
+          </div>
+          <div style="padding:32px;">
+            <p style="color:#9a9890;font-size:14px;">Usa questo codice per accedere al voto:</p>
+            <div style="text-align:center;margin:24px 0;">
+              <span style="font-size:36px;font-weight:700;letter-spacing:8px;color:#c9a84c;">${code}</span>
+            </div>
+            <p style="color:#5a5850;font-size:12px;text-align:center;">Il codice scade tra 30 minuti.</p>
+          </div>
+        </div>`
+      });
+    }
+
+    res.json({ success: true, message: 'Codice inviato alla tua email' });
+  } catch (err) {
+    console.error('Vote auth error:', err);
+    res.status(500).json({ error: 'Errore nell\'invio del codice' });
+  }
+});
+
+// ========== VOTER AUTH: Verify OTP ==========
+router.post('/verify', async (req, res) => {
+  try {
+    const email = (req.body.email || '').trim().toLowerCase();
+    const code = (req.body.code || '').trim();
+    if (!email || !code) return res.status(400).json({ error: 'Email e codice obbligatori' });
+
+    const { rows } = await pool.query(
+      `SELECT id FROM otp_codes
+       WHERE email = $1 AND code = $2 AND used_at IS NULL AND expires_at > NOW()
+       ORDER BY created_at DESC LIMIT 1`,
+      [email, code]
+    );
+    if (rows.length === 0) {
+      return res.status(400).json({ error: 'Codice non valido o scaduto' });
+    }
+
+    // Mark OTP as used
+    await pool.query('UPDATE otp_codes SET used_at = NOW() WHERE id = $1', [rows[0].id]);
+
+    // Create voter token (valid 24h)
+    const token = uuidv4();
+    await pool.query(
+      `INSERT INTO voter_tokens (email, token, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '24 hours')`,
+      [email, token]
+    );
+
+    // Get voter's own registration IDs (to prevent self-voting)
+    const { rows: ownRegs } = await pool.query(
+      "SELECT id FROM registrations WHERE LOWER(contact_email) = $1", [email]
+    );
+    const { rows: ownGroups } = await pool.query(
+      `SELECT r.id FROM group_members gm
+       JOIN registrations r ON r.id = gm.registration_id
+       WHERE LOWER(gm.email) = $1`, [email]
+    );
+    const selfRegIds = [...new Set([
+      ...ownRegs.map(r => r.id),
+      ...ownGroups.map(r => r.id)
+    ])];
+
+    res.json({ success: true, token, email, selfRegIds });
+  } catch (err) {
+    console.error('Vote verify error:', err);
+    res.status(500).json({ error: 'Errore nella verifica' });
+  }
+});
+
+// ========== MIDDLEWARE: Verify voter token ==========
+async function voterAuth(req, res, next) {
+  const token = req.headers['x-voter-token'];
+  if (!token) return res.status(401).json({ error: 'Token di voto mancante' });
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT email FROM voter_tokens WHERE token = $1 AND expires_at > NOW()',
+      [token]
+    );
+    if (rows.length === 0) return res.status(401).json({ error: 'Sessione scaduta. Effettua di nuovo l\'accesso.' });
+    req.voterEmail = rows[0].email;
+    next();
+  } catch (err) {
+    res.status(500).json({ error: 'Errore di autenticazione' });
+  }
+}
+
+// ========== GET performers list (for voter) ==========
+router.get('/performers', voterAuth, async (req, res) => {
+  try {
+    const voterEmail = req.voterEmail;
+
+    // Get all accepted registrations (solista + gruppo only, not pubblico)
+    const { rows: performers } = await pool.query(`
+      SELECT r.id, r.type, r.contact_name, r.contact_email, r.group_name, r.company,
+        r.song_1, r.song_1_artist, r.voting_open,
+        COALESCE(json_agg(json_build_object('email', LOWER(gm.email)))
+          FILTER (WHERE gm.id IS NOT NULL), '[]') as members
+      FROM registrations r
+      LEFT JOIN group_members gm ON gm.registration_id = r.id
+      WHERE r.status = 'accepted' AND r.type != 'pubblico'
+      GROUP BY r.id
+      ORDER BY r.voting_order NULLS LAST, r.created_at
+    `);
+
+    // Get voter's existing votes
+    const { rows: myVotes } = await pool.query(
+      'SELECT registration_id, score_preparation, score_performance FROM votes WHERE LOWER(voter_email) = $1',
+      [voterEmail.toLowerCase()]
+    );
+    const votesMap = {};
+    myVotes.forEach(v => { votesMap[v.registration_id] = v; });
+
+    // Get voter's own registrations (for self-vote prevention)
+    const { rows: ownRegs } = await pool.query(
+      "SELECT id FROM registrations WHERE LOWER(contact_email) = $1", [voterEmail.toLowerCase()]
+    );
+    const { rows: ownGroups } = await pool.query(
+      `SELECT r.id FROM group_members gm
+       JOIN registrations r ON r.id = gm.registration_id
+       WHERE LOWER(gm.email) = $1`, [voterEmail.toLowerCase()]
+    );
+    const selfRegIds = new Set([
+      ...ownRegs.map(r => r.id),
+      ...ownGroups.map(r => r.id)
+    ]);
+
+    const result = performers.map(p => ({
+      id: p.id,
+      type: p.type,
+      name: p.type === 'gruppo' ? p.group_name : p.contact_name,
+      company: p.company,
+      song: p.song_1,
+      song_artist: p.song_1_artist,
+      voting_open: p.voting_open,
+      is_self: selfRegIds.has(p.id),
+      my_vote: votesMap[p.id] || null,
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error('Performers list error:', err);
+    res.status(500).json({ error: 'Errore nel recupero concorrenti' });
+  }
+});
+
+// ========== CAST VOTE ==========
+router.post('/cast', voterAuth, async (req, res) => {
+  try {
+    const voterEmail = req.voterEmail.toLowerCase();
+    const { registration_id, score_preparation, score_performance } = req.body;
+
+    // Validate scores
+    if (score_preparation < 0 || score_preparation > 5 || score_performance < 0 || score_performance > 5) {
+      return res.status(400).json({ error: 'Il voto deve essere compreso tra 0 e 5' });
+    }
+    if (!Number.isInteger(score_preparation) || !Number.isInteger(score_performance)) {
+      return res.status(400).json({ error: 'Il voto deve essere un numero intero' });
+    }
+
+    // Check registration exists and voting is open
+    const { rows: regRows } = await pool.query(
+      "SELECT id, type, contact_email, voting_open FROM registrations WHERE id = $1 AND status = 'accepted' AND type != 'pubblico'",
+      [registration_id]
+    );
+    if (regRows.length === 0) {
+      return res.status(404).json({ error: 'Concorrente non trovato' });
+    }
+    if (!regRows[0].voting_open) {
+      return res.status(403).json({ error: 'Le votazioni per questo concorrente non sono ancora aperte' });
+    }
+
+    // Check self-voting
+    if (regRows[0].contact_email.toLowerCase() === voterEmail) {
+      return res.status(403).json({ error: 'Non puoi votare per te stesso' });
+    }
+    // Check if voter is a group member of this registration
+    const { rows: memberCheck } = await pool.query(
+      'SELECT id FROM group_members WHERE registration_id = $1 AND LOWER(email) = $2',
+      [registration_id, voterEmail]
+    );
+    if (memberCheck.length > 0) {
+      return res.status(403).json({ error: 'Non puoi votare per il tuo gruppo' });
+    }
+
+    // Check duplicate vote
+    const { rows: existingVote } = await pool.query(
+      'SELECT id FROM votes WHERE LOWER(voter_email) = $1 AND registration_id = $2',
+      [voterEmail, registration_id]
+    );
+    if (existingVote.length > 0) {
+      return res.status(409).json({ error: 'Hai già votato per questo concorrente. Il voto non è modificabile.' });
+    }
+
+    // Insert vote
+    await pool.query(
+      `INSERT INTO votes (voter_email, registration_id, score_preparation, score_performance)
+       VALUES ($1, $2, $3, $4)`,
+      [voterEmail, registration_id, score_preparation, score_performance]
+    );
+
+    res.json({ success: true, message: 'Voto registrato!' });
+  } catch (err) {
+    console.error('Cast vote error:', err);
+    res.status(500).json({ error: 'Errore nella registrazione del voto' });
+  }
+});
+
+// ========== PUBLIC LEADERBOARD ==========
+router.get('/leaderboard', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT r.id, r.type, r.contact_name, r.group_name, r.company, r.song_1, r.song_1_artist,
+        COALESCE(SUM(v.score_preparation), 0) as total_preparation,
+        COALESCE(SUM(v.score_performance), 0) as total_performance,
+        COALESCE(SUM(v.score_preparation + v.score_performance), 0) as total_score,
+        COUNT(v.id) as vote_count
+      FROM registrations r
+      LEFT JOIN votes v ON v.registration_id = r.id
+      WHERE r.status = 'accepted' AND r.type != 'pubblico'
+      GROUP BY r.id
+      ORDER BY total_score DESC, total_performance DESC, r.contact_name
+    `);
+
+    res.json(rows.map(r => ({
+      id: r.id,
+      name: r.type === 'gruppo' ? r.group_name : r.contact_name,
+      type: r.type,
+      company: r.company,
+      song: r.song_1,
+      song_artist: r.song_1_artist,
+      total_preparation: parseInt(r.total_preparation),
+      total_performance: parseInt(r.total_performance),
+      total_score: parseInt(r.total_score),
+      vote_count: parseInt(r.vote_count),
+    })));
+  } catch (err) {
+    console.error('Leaderboard error:', err);
+    res.status(500).json({ error: 'Errore nel recupero classifica' });
+  }
+});
+
+// ========== ADMIN: Voting management ==========
+router.get('/admin/status', adminAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT r.id, r.type, r.contact_name, r.group_name, r.company,
+        r.song_1, r.song_1_artist, r.voting_open, r.voting_order,
+        COALESCE(SUM(v.score_preparation), 0) as total_preparation,
+        COALESCE(SUM(v.score_performance), 0) as total_performance,
+        COALESCE(SUM(v.score_preparation + v.score_performance), 0) as total_score,
+        COUNT(v.id) as vote_count
+      FROM registrations r
+      LEFT JOIN votes v ON v.registration_id = r.id
+      WHERE r.status = 'accepted' AND r.type != 'pubblico'
+      GROUP BY r.id
+      ORDER BY r.voting_order NULLS LAST, r.company, r.contact_name
+    `);
+
+    res.json(rows.map(r => ({
+      id: r.id,
+      name: r.type === 'gruppo' ? r.group_name : r.contact_name,
+      type: r.type,
+      company: r.company,
+      song: r.song_1,
+      song_artist: r.song_1_artist,
+      voting_open: r.voting_open,
+      voting_order: r.voting_order,
+      total_preparation: parseInt(r.total_preparation),
+      total_performance: parseInt(r.total_performance),
+      total_score: parseInt(r.total_score),
+      vote_count: parseInt(r.vote_count),
+    })));
+  } catch (err) {
+    console.error('Admin voting status error:', err);
+    res.status(500).json({ error: 'Errore nel recupero stato votazioni' });
+  }
+});
+
+router.put('/admin/toggle', adminAuth, async (req, res) => {
+  try {
+    const { ids, open } = req.body; // ids: array of registration IDs, open: boolean
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Nessun concorrente selezionato' });
+    }
+    await pool.query(
+      `UPDATE registrations SET voting_open = $1 WHERE id = ANY($2::int[]) AND status = 'accepted' AND type != 'pubblico'`,
+      [!!open, ids]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Admin voting toggle error:', err);
+    res.status(500).json({ error: 'Errore nell\'aggiornamento' });
+  }
+});
+
+router.put('/admin/order', adminAuth, async (req, res) => {
+  try {
+    const { order } = req.body; // array of { id, position }
+    if (!order || !Array.isArray(order)) {
+      return res.status(400).json({ error: 'Ordine non valido' });
+    }
+    for (const item of order) {
+      await pool.query(
+        'UPDATE registrations SET voting_order = $1 WHERE id = $2',
+        [item.position, item.id]
+      );
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Admin voting order error:', err);
+    res.status(500).json({ error: 'Errore nell\'aggiornamento ordine' });
+  }
+});
+
+router.get('/admin/detailed-results', adminAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT v.registration_id, v.voter_email, v.score_preparation, v.score_performance,
+        v.created_at, r.contact_name, r.group_name, r.type, r.company
+      FROM votes v
+      JOIN registrations r ON r.id = v.registration_id
+      ORDER BY v.registration_id, v.created_at
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('Detailed results error:', err);
+    res.status(500).json({ error: 'Errore nel recupero risultati dettagliati' });
+  }
+});
+
+// Admin: get voter count (how many unique voters)
+router.get('/admin/voter-stats', adminAuth, async (req, res) => {
+  try {
+    const { rows: voterCount } = await pool.query(
+      'SELECT COUNT(DISTINCT LOWER(voter_email)) as total_voters FROM votes'
+    );
+    const { rows: totalVotes } = await pool.query('SELECT COUNT(*) as total FROM votes');
+    const { rows: totalEligible } = await pool.query(`
+      SELECT COUNT(*) as total FROM (
+        SELECT contact_email as email FROM registrations WHERE status = 'accepted'
+        UNION
+        SELECT gm.email FROM group_members gm JOIN registrations r ON r.id = gm.registration_id WHERE r.status = 'accepted' AND gm.email IS NOT NULL AND gm.email != ''
+        UNION
+        SELECT contact_email as email FROM registrations WHERE type = 'pubblico'
+      ) sub
+    `);
+    res.json({
+      unique_voters: parseInt(voterCount.rows ? voterCount.rows[0]?.total_voters : voterCount[0]?.total_voters || 0),
+      total_votes: parseInt(totalVotes.rows ? totalVotes.rows[0]?.total : totalVotes[0]?.total || 0),
+      total_eligible: parseInt(totalEligible.rows ? totalEligible.rows[0]?.total : totalEligible[0]?.total || 0),
+    });
+  } catch (err) {
+    console.error('Voter stats error:', err);
+    res.status(500).json({ error: 'Errore statistiche votanti' });
+  }
+});
+
+module.exports = router;
