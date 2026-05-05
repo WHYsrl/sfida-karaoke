@@ -528,9 +528,9 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
         <span>Proiettore — Pubblicazione Risultati</span>
         <div style="display:flex;gap:8px;align-items:center;">
-          <button onclick="publishResults('all')" style="padding:7px 14px;border-radius:7px;border:none;background:var(--success);color:#fff;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;">Pubblica tutti</button>
-          <button onclick="publishResults('selected')" style="padding:7px 14px;border-radius:7px;border:none;background:var(--info);color:#fff;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;">Pubblica selezionati</button>
-          <button onclick="publishResults('none')" style="padding:7px 14px;border-radius:7px;border:1px solid var(--error);background:transparent;color:var(--error);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;">Nascondi tutti</button>
+          <button id="btnPublishAll" onclick="publishResults('all')" style="padding:7px 14px;border-radius:7px;border:2px solid var(--success);background:transparent;color:var(--success);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;">Pubblica tutti</button>
+          <button id="btnPublishSelected" onclick="publishResults('selected')" style="padding:7px 14px;border-radius:7px;border:2px solid var(--info);background:transparent;color:var(--info);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;">Pubblica selezionati</button>
+          <button id="btnPublishNone" onclick="publishResults('none')" style="padding:7px 14px;border-radius:7px;border:2px solid var(--error);background:transparent;color:var(--error);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;">Nascondi tutti</button>
           <a href="leaderboard.html" target="_blank" style="padding:7px 14px;border-radius:7px;border:1px solid var(--border);color:var(--text-muted);font-family:inherit;font-size:11px;text-decoration:none;">Apri proiettore &rarr;</a>
         </div>
       </div>
@@ -1688,13 +1688,25 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
 
   function updateProjectorStatusText() {
     const el = document.getElementById('projectorResultsStatus');
+    const btnAll = document.getElementById('btnPublishAll');
+    const btnSel = document.getElementById('btnPublishSelected');
+    const btnNone = document.getElementById('btnPublishNone');
+    // Reset all buttons to outline style
+    [btnAll, btnSel, btnNone].forEach(b => { if(b) { b.style.background = 'transparent'; b.style.boxShadow = 'none'; }});
+    if (btnAll) { btnAll.style.color = 'var(--success)'; }
+    if (btnSel) { btnSel.style.color = 'var(--info)'; }
+    if (btnNone) { btnNone.style.color = 'var(--error)'; }
+
     if (projectorShowValue === 'all') {
       el.innerHTML = 'Stato: <strong style="color:var(--success);">TUTTI VISIBILI</strong> sul proiettore';
+      if (btnAll) { btnAll.style.background = 'var(--success)'; btnAll.style.color = '#fff'; btnAll.style.boxShadow = '0 0 12px rgba(34,197,94,0.4)'; }
     } else if (projectorShowValue === 'none' || projectorShowValue === '') {
       el.innerHTML = 'Stato: <strong style="color:var(--text-muted);">NASCOSTI</strong> sul proiettore';
+      if (btnNone) { btnNone.style.background = 'var(--error)'; btnNone.style.color = '#fff'; btnNone.style.boxShadow = '0 0 12px rgba(239,68,68,0.4)'; }
     } else {
       const count = projectorShowValue.split(',').length;
       el.innerHTML = `Stato: <strong style="color:var(--info);">${count} artisti visibili</strong> sul proiettore`;
+      if (btnSel) { btnSel.style.background = 'var(--info)'; btnSel.style.color = '#fff'; btnSel.style.boxShadow = '0 0 12px rgba(59,130,246,0.4)'; }
     }
   }
 
@@ -1707,6 +1719,7 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
       await voteApi('/show-results', { method: 'PUT', body: JSON.stringify({ mode }) });
     }
     await loadProjectorResultsStatus();
+    await loadVotingLeaderboardPreview();
   }
 
   async function loadVotingLeaderboardPreview() {
