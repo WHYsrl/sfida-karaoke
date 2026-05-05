@@ -1121,9 +1121,31 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
             <div class="song-item">🎵 <span class="song-title">${g.song_1}</span>${g.song_1_artist ? ` — ${g.song_1_artist}` : ''}</div>
             <div class="song-item">🎵 <span class="song-title">${g.song_2}</span>${g.song_2_artist ? ` — ${g.song_2_artist}` : ''}</div>
           </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);text-align:right;">
+            <button class="detail-btn detail-btn-reject" onclick="confirmDeleteGroup(${g.id},'${esc(g.group_name)}')">🗑 Elimina gruppo</button>
+          </div>
         </div>
       `;
     }).join('') || '<p style="color:var(--text-muted)">Nessun gruppo registrato</p>';
+  }
+
+  async function confirmDeleteGroup(id, name) {
+    if (!confirm(`Sei sicuro di voler eliminare il gruppo "${name}" e tutti i suoi membri? I membri che fanno parte di altri gruppi non verranno toccati.`)) return;
+    try {
+      const res = await fetch(`/api/admin/registrations/${id}`, {
+        method: 'DELETE',
+        headers: { 'X-Admin-Password': adminPassword },
+      });
+      if (res.ok) {
+        loadGroups();
+        loadDashboard();
+      } else {
+        const err = await res.json();
+        alert('Errore: ' + (err.error || 'Errore nella cancellazione'));
+      }
+    } catch (e) {
+      alert('Errore di connessione');
+    }
   }
 
   // ===== SEND INVITES =====
