@@ -526,13 +526,16 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     <!-- Proiettore control -->
     <div class="card" style="margin-bottom:16px;">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-        <span>Proiettore</span>
+        <span>Proiettore — Pubblicazione Risultati</span>
         <div style="display:flex;gap:8px;align-items:center;">
-          <span id="projectorResultsStatus" style="font-size:11px;color:var(--text-muted);">Risultati: nascosti</span>
-          <button id="projectorResultsBtn" onclick="toggleProjectorResults()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--info);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">Mostra risultati</button>
-          <a href="leaderboard.html" target="_blank" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);color:var(--text-muted);font-family:inherit;font-size:12px;text-decoration:none;">Apri proiettore &rarr;</a>
+          <button onclick="publishResults('all')" style="padding:7px 14px;border-radius:7px;border:none;background:var(--success);color:#fff;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;">Pubblica tutti</button>
+          <button onclick="publishResults('selected')" style="padding:7px 14px;border-radius:7px;border:none;background:var(--info);color:#fff;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;">Pubblica selezionati</button>
+          <button onclick="publishResults('none')" style="padding:7px 14px;border-radius:7px;border:1px solid var(--error);background:transparent;color:var(--error);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;">Nascondi tutti</button>
+          <a href="leaderboard.html" target="_blank" style="padding:7px 14px;border-radius:7px;border:1px solid var(--border);color:var(--text-muted);font-family:inherit;font-size:11px;text-decoration:none;">Apri proiettore &rarr;</a>
         </div>
       </div>
+      <div id="projectorResultsStatus" style="margin-top:8px;font-size:12px;color:var(--text-muted);"></div>
+      <div id="projectorResultsPreview" style="margin-top:12px;"></div>
     </div>
 
     <!-- Performer voting status -->
@@ -1335,9 +1338,10 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
 
   async function loadVotingTab() {
     await loadVotingPerformers();
+    await loadProjectorResultsStatus();
+    await loadVotingLeaderboardPreview();
     await loadVotingLeaderboard();
     await loadVoterStats();
-    await loadProjectorResultsStatus();
   }
 
   async function loadVotingPerformers() {
@@ -1605,12 +1609,14 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
             <th style="padding:8px;text-align:left;">Artista</th>
             <th style="padding:8px;text-align:center;">Prep.</th>
             <th style="padding:8px;text-align:center;">Perf.</th>
-            <th style="padding:8px;text-align:center;">Totale</th>
+            <th style="padding:8px;text-align:center;">Media</th>
             <th style="padding:8px;text-align:center;">Voti</th>
           </tr>
         </thead>
         <tbody>
-          ${results.map((r, i) => `
+          ${results.map((r, i) => {
+            const media = r.media != null ? parseFloat(r.media).toFixed(1) : '-';
+            return `
             <tr style="border-bottom:1px solid var(--border);">
               <td style="padding:8px;font-weight:700;color:${i < 3 ? 'var(--gold)' : 'var(--text-muted)'};">${i+1}</td>
               <td style="padding:8px;">
@@ -1619,10 +1625,10 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
               </td>
               <td style="padding:8px;text-align:center;">${r.avg_preparation ? parseFloat(r.avg_preparation).toFixed(1) : '-'}</td>
               <td style="padding:8px;text-align:center;">${r.avg_performance ? parseFloat(r.avg_performance).toFixed(1) : '-'}</td>
-              <td style="padding:8px;text-align:center;font-weight:700;color:var(--gold);">${r.total_avg ? parseFloat(r.total_avg).toFixed(1) : '-'}</td>
+              <td style="padding:8px;text-align:center;font-weight:700;color:var(--gold);">${media}</td>
               <td style="padding:8px;text-align:center;color:var(--text-muted);">${r.vote_count}</td>
-            </tr>
-          `).join('')}
+            </tr>`;
+          }).join('')}
         </tbody>
       </table>
     `;
@@ -1668,35 +1674,97 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     }
   }
 
-  // ===== PROJECTOR RESULTS TOGGLE =====
-  let projectorResultsVisible = false;
+  // ===== PROJECTOR RESULTS =====
+  let projectorShowValue = 'none';
+  let adminResultsData = [];
 
   async function loadProjectorResultsStatus() {
     try {
       const data = await voteApi('/show-results');
-      projectorResultsVisible = data.visible;
-      updateProjectorResultsUI();
+      projectorShowValue = data.value || 'none';
+      updateProjectorStatusText();
     } catch (e) { /* silent */ }
   }
 
-  function updateProjectorResultsUI() {
-    const btn = document.getElementById('projectorResultsBtn');
-    const status = document.getElementById('projectorResultsStatus');
-    if (projectorResultsVisible) {
-      btn.textContent = 'Nascondi risultati';
-      btn.style.background = 'var(--error)';
-      status.innerHTML = 'Risultati: <strong style="color:var(--success);">VISIBILI</strong>';
+  function updateProjectorStatusText() {
+    const el = document.getElementById('projectorResultsStatus');
+    if (projectorShowValue === 'all') {
+      el.innerHTML = 'Stato: <strong style="color:var(--success);">TUTTI VISIBILI</strong> sul proiettore';
+    } else if (projectorShowValue === 'none' || projectorShowValue === '') {
+      el.innerHTML = 'Stato: <strong style="color:var(--text-muted);">NASCOSTI</strong> sul proiettore';
     } else {
-      btn.textContent = 'Mostra risultati';
-      btn.style.background = 'var(--info)';
-      status.innerHTML = 'Risultati: <strong style="color:var(--text-muted);">nascosti</strong>';
+      const count = projectorShowValue.split(',').length;
+      el.innerHTML = `Stato: <strong style="color:var(--info);">${count} artisti visibili</strong> sul proiettore`;
     }
   }
 
-  async function toggleProjectorResults() {
-    projectorResultsVisible = !projectorResultsVisible;
-    await voteApi('/show-results', { method: 'PUT', body: JSON.stringify({ visible: projectorResultsVisible }) });
-    updateProjectorResultsUI();
+  async function publishResults(mode) {
+    if (mode === 'selected') {
+      const checked = Array.from(document.querySelectorAll('.result-checkbox:checked')).map(cb => parseInt(cb.dataset.id));
+      if (!checked.length) { alert('Seleziona almeno un artista dalla preview qui sotto.'); return; }
+      await voteApi('/show-results', { method: 'PUT', body: JSON.stringify({ mode: 'selected', ids: checked }) });
+    } else {
+      await voteApi('/show-results', { method: 'PUT', body: JSON.stringify({ mode }) });
+    }
+    await loadProjectorResultsStatus();
+  }
+
+  async function loadVotingLeaderboardPreview() {
+    const data = await voteApi('/detailed-results');
+    adminResultsData = data.results || [];
+    const container = document.getElementById('projectorResultsPreview');
+    if (!adminResultsData.length) {
+      container.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">Nessun voto ricevuto.</p>';
+      return;
+    }
+    // Parse visible IDs
+    const visibleIds = projectorShowValue === 'all'
+      ? adminResultsData.map(r => r.registration_id || r.id)
+      : projectorShowValue !== 'none' && projectorShowValue !== ''
+        ? projectorShowValue.split(',').map(Number)
+        : [];
+
+    container.innerHTML = `
+      <div style="margin-bottom:8px;">
+        <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+          <input type="checkbox" onchange="document.querySelectorAll('.result-checkbox').forEach(cb=>cb.checked=this.checked)"> Seleziona tutti
+        </label>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);color:var(--text-muted);font-size:10px;text-transform:uppercase;">
+            <th style="padding:6px;width:30px;"></th>
+            <th style="padding:6px;text-align:left;">#</th>
+            <th style="padding:6px;text-align:left;">Artista</th>
+            <th style="padding:6px;text-align:center;">Prep.</th>
+            <th style="padding:6px;text-align:center;">Perf.</th>
+            <th style="padding:6px;text-align:center;">Media</th>
+            <th style="padding:6px;text-align:center;">Voti</th>
+            <th style="padding:6px;text-align:center;">Proiettore</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${adminResultsData.map((r, i) => {
+            const rid = r.registration_id || r.id;
+            const isVisible = visibleIds.includes(rid);
+            const media = r.media != null ? parseFloat(r.media).toFixed(1) : (r.total_avg != null ? (parseFloat(r.total_avg)/2).toFixed(1) : '-');
+            const prep = r.avg_preparation != null ? parseFloat(r.avg_preparation).toFixed(1) : '-';
+            const perf = r.avg_performance != null ? parseFloat(r.avg_performance).toFixed(1) : '-';
+            return `
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:6px;"><input type="checkbox" class="result-checkbox" data-id="${rid}" ${isVisible ? 'checked' : ''}></td>
+                <td style="padding:6px;font-weight:700;color:${i < 3 ? 'var(--gold)' : 'var(--text-muted)'};">${i+1}</td>
+                <td style="padding:6px;"><strong>${esc(r.name)}</strong> <span style="color:var(--text-muted);font-size:10px;">${r.company === 'ourfilms' ? 'OF' : 'FBF'}</span></td>
+                <td style="padding:6px;text-align:center;">${prep}</td>
+                <td style="padding:6px;text-align:center;">${perf}</td>
+                <td style="padding:6px;text-align:center;font-weight:700;color:var(--gold);">${media}</td>
+                <td style="padding:6px;text-align:center;color:var(--text-muted);">${r.vote_count}</td>
+                <td style="padding:6px;text-align:center;">${isVisible ? '<span style="color:var(--success);">Visibile</span>' : '<span style="color:var(--text-muted);">—</span>'}</td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
   }
 </script>
 </body>

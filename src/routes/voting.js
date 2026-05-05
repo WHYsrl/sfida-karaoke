@@ -433,12 +433,12 @@ router.get('/admin/detailed-results', adminAuth, async (req, res) => {
         r.type, r.company,
         ROUND(AVG(v.score_preparation)::numeric, 2) as avg_preparation,
         ROUND(AVG(v.score_performance)::numeric, 2) as avg_performance,
-        ROUND((AVG(v.score_preparation) + AVG(v.score_performance))::numeric, 2) as total_avg,
+        ROUND(((AVG(v.score_preparation) + AVG(v.score_performance)) / 2)::numeric, 2) as media,
         COUNT(v.id) as vote_count
       FROM registrations r
       INNER JOIN votes v ON v.registration_id = r.id
       GROUP BY r.id
-      ORDER BY total_avg DESC NULLS LAST
+      ORDER BY media DESC NULLS LAST
     `);
     res.json({ results: rows });
   } catch (err) {
@@ -539,16 +539,20 @@ router.delete('/admin/reset-votes', adminAuth, async (req, res) => {
   }
 });
 
-// ========== ADMIN: Toggle projector results visibility ==========
+// ========== ADMIN: Set which artist results to show on projector ==========
+// value: 'none', 'all', or comma-separated IDs like '1,5,12'
 router.put('/admin/show-results', adminAuth, async (req, res) => {
   try {
-    const { visible } = req.body; // boolean
+    const { mode, ids } = req.body; // mode: 'none'|'all'|'selected', ids: [1,2,3]
+    let val = 'none';
+    if (mode === 'all') val = 'all';
+    else if (mode === 'selected' && ids && ids.length) val = ids.join(',');
     await pool.query(
       `INSERT INTO app_settings (key, value) VALUES ('projector_show_results', $1)
        ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
-      [visible ? 'true' : 'false']
+      [val]
     );
-    res.json({ success: true, visible: !!visible });
+    res.json({ success: true, value: val });
   } catch (err) {
     console.error('Show results error:', err);
     res.status(500).json({ error: 'Errore aggiornamento visibilità risultati' });
@@ -560,45 +564,77 @@ router.get('/admin/show-results', adminAuth, async (req, res) => {
     const { rows } = await pool.query(
       `SELECT value FROM app_settings WHERE key = 'projector_show_results'`
     );
-    res.json({ visible: rows.length > 0 && rows[0].value === 'true' });
+    const val = rows.length ? rows[0].value : 'none';
+    res.json({ value: val });
   } catch (err) {
-    res.json({ visible: false });
+    res.json({ value: 'none' });
   }
 });
 
 // ========== PUBLIC: full projector data (results + status) ==========
 router.get('/projector-data', async (req, res) => {
   try {
-    // Voting status
+    // Voting status + group members for open performers
     const { rows: openPerformers } = await pool.query(`
-      SELECT id, type, contact_name, group_name, company, song_1, song_1_artist, song_2, song_2_artist, current_song_num
-      FROM registrations WHERE voting_open = true AND type != 'pubblico'
-      ORDER BY voting_order NULLS LAST, created_at
+      SELECT r.id, r.type, r.contact_name, r.group_name, r.company,
+        r.song_1, r.song_1_artist, r.song_2, r.song_2_artist, r.current_song_num
+      FROM registrations r
+      WHERE r.voting_open = true AND r.type != 'pubblico'
+      ORDER BY r.voting_order NULLS LAST, r.created_at
     `);
+    // Fetch members for open groups
+    const openGroupIds = openPerformers.filter(p => p.type === 'gruppo').map(p => p.id);
+    let openMembersMap = {};
+    if (openGroupIds.length) {
+      const { rows: gm } = await pool.query(
+        'SELECT registration_id, name FROM group_members WHERE registration_id = ANY($1) ORDER BY id',
+        [openGroupIds]
+      );
+      gm.forEach(m => {
+        if (!openMembersMap[m.registration_id]) openMembersMap[m.registration_id] = [];
+        openMembersMap[m.registration_id].push(m.name);
+      });
+    }
+
     // Timer
     const { rows: timerRows } = await pool.query(
       `SELECT value FROM app_settings WHERE key = 'voting_timer_ends_at'`
     );
     const timerEndsAt = timerRows.length && timerRows[0].value ? timerRows[0].value : null;
-    // Show results flag
+
+    // Show results setting
     const { rows: showRows } = await pool.query(
       `SELECT value FROM app_settings WHERE key = 'projector_show_results'`
     );
-    const showResults = showRows.length > 0 && showRows[0].value === 'true';
-    // Results (always fetch, frontend decides whether to show)
+    const showVal = showRows.length ? showRows[0].value : 'none';
+
+    // Results with MEDIA (average of prep+perf / 2)
     const { rows: results } = await pool.query(`
       SELECT r.id,
         CASE WHEN r.type = 'gruppo' THEN r.group_name ELSE r.contact_name END as name,
         r.type, r.company,
         ROUND(AVG(v.score_preparation)::numeric, 2) as avg_preparation,
         ROUND(AVG(v.score_performance)::numeric, 2) as avg_performance,
-        ROUND((AVG(v.score_preparation) + AVG(v.score_performance))::numeric, 2) as total_avg,
+        ROUND(((AVG(v.score_preparation) + AVG(v.score_performance)) / 2)::numeric, 2) as media,
         COUNT(v.id) as vote_count
       FROM registrations r
       INNER JOIN votes v ON v.registration_id = r.id
       GROUP BY r.id
-      ORDER BY total_avg DESC NULLS LAST
+      ORDER BY media DESC NULLS LAST
     `);
+
+    // Total unique voters
+    const { rows: vc } = await pool.query('SELECT COUNT(DISTINCT LOWER(voter_email)) as c FROM votes');
+    const totalVoters = parseInt(vc[0]?.c || 0);
+
+    // Filter results based on show setting
+    let visibleResults = [];
+    if (showVal === 'all') {
+      visibleResults = results;
+    } else if (showVal !== 'none' && showVal !== '') {
+      const visibleIds = showVal.split(',').map(Number);
+      visibleResults = results.filter(r => visibleIds.includes(r.id));
+    }
 
     res.json({
       voting_open: openPerformers.length > 0,
@@ -610,15 +646,17 @@ router.get('/projector-data', async (req, res) => {
           company: p.company, type: p.type,
           song: sn === 2 ? p.song_2 : p.song_1,
           song_artist: sn === 2 ? p.song_2_artist : p.song_1_artist,
+          members: openMembersMap[p.id] || [],
         };
       }),
       timer_ends_at: timerEndsAt,
-      show_results: showResults,
-      results: results.map(r => ({
-        name: r.name, type: r.type, company: r.company,
+      show_results: showVal !== 'none' && showVal !== '',
+      total_voters: totalVoters,
+      results: visibleResults.map(r => ({
+        id: r.id, name: r.name, type: r.type, company: r.company,
         avg_preparation: r.avg_preparation ? parseFloat(r.avg_preparation) : null,
         avg_performance: r.avg_performance ? parseFloat(r.avg_performance) : null,
-        total_avg: r.total_avg ? parseFloat(r.total_avg) : null,
+        media: r.media ? parseFloat(r.media) : null,
         vote_count: parseInt(r.vote_count),
       })),
     });
