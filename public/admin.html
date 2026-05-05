@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin — Sfida Karaoke</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -401,6 +402,7 @@
     <div class="table-header">
       <h2>👥 Tutti i Partecipanti</h2>
       <div class="filters">
+        <button class="detail-btn" onclick="exportParticipants()" style="white-space:nowrap;">📥 Excel</button>
         <input type="text" class="search-input" id="participantSearch" placeholder="Cerca nome, email, gruppo..." oninput="filterParticipants()">
         <select id="filterParticipantCompany" onchange="loadParticipants()">
           <option value="">Tutte le societa</option>
@@ -441,6 +443,7 @@
     <div class="table-header">
       <h2>🎭 Gruppi</h2>
       <div class="filters">
+        <button class="detail-btn" onclick="exportGroups()" style="white-space:nowrap;">📥 Excel</button>
         <select id="filterGroupCompany" onchange="loadGroups()">
           <option value="">Tutte le societa</option>
           <option value="ourfilms">Our Films</option>
@@ -456,6 +459,9 @@
   <div class="tab-content" id="tab-songs">
     <div class="table-header">
       <h2>🎵 Elenco Canzoni</h2>
+      <div class="filters">
+        <button class="detail-btn" onclick="exportSongs()" style="white-space:nowrap;">📥 Excel</button>
+      </div>
     </div>
     <div class="scroll-x">
       <table>
@@ -1146,6 +1152,81 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
     } catch (e) {
       alert('Errore di connessione');
     }
+  }
+
+  // ===== EXCEL EXPORT =====
+  function downloadExcel(data, headers, filename) {
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    // Auto-size columns
+    ws['!cols'] = headers.map((h, i) => {
+      const maxLen = Math.max(h.length, ...data.map(row => String(row[i] || '').length));
+      return { wch: Math.min(maxLen + 2, 40) };
+    });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Dati');
+    XLSX.writeFile(wb, filename);
+  }
+
+  function exportParticipants() {
+    const headers = ['Nome', 'Cognome', 'Email', 'Società', 'Ruolo', 'Gruppo', 'Stato', 'Canzone 1', 'Artista 1', 'Canzone 2', 'Artista 2'];
+    const data = allParticipants.map(p => [
+      p.first_name || p.name.split(' ')[0] || '',
+      p.last_name || p.name.split(' ').slice(1).join(' ') || '',
+      p.email || '',
+      p.company === 'ourfilms' ? 'Our Films' : 'Frame by Frame',
+      { solista: 'Solista', capogruppo: 'Capogruppo', membro: 'Membro', pubblico: 'Pubblico' }[p.role] || p.role,
+      p.group_name || '',
+      { pending: 'In attesa', accepted: 'Accettata', revision: 'Revisione', rejected: 'Rifiutata' }[p.status] || p.status,
+      p.song_1 || '',
+      p.song_1_artist || '',
+      p.song_2 || '',
+      p.song_2_artist || '',
+    ]);
+    downloadExcel(data, headers, 'Partecipanti_Sfida_Karaoke.xlsx');
+  }
+
+  async function exportGroups() {
+    const regs = await api('/registrations');
+    const singoli = regs.filter(r => r.type === 'solista');
+    const gruppi = regs.filter(r => r.type === 'gruppo');
+
+    const headers = ['Tipo', 'Nome/Gruppo', 'Capogruppo', 'Email', 'Società', 'Membri', 'Stato', 'Canzone 1', 'Artista 1', 'Canzone 2', 'Artista 2'];
+    const data = [];
+
+    singoli.forEach(r => {
+      data.push([
+        'Solista', r.contact_name, '', r.contact_email,
+        r.company === 'ourfilms' ? 'Our Films' : 'Frame by Frame',
+        '', statusLabel(r.status),
+        r.song_1 || '', r.song_1_artist || '', r.song_2 || '', r.song_2_artist || ''
+      ]);
+    });
+
+    gruppi.forEach(r => {
+      const memberNames = (r.members || []).map(m => m.name).join(', ');
+      data.push([
+        'Gruppo', r.group_name, r.contact_name, r.contact_email,
+        r.company === 'ourfilms' ? 'Our Films' : 'Frame by Frame',
+        memberNames, statusLabel(r.status),
+        r.song_1 || '', r.song_1_artist || '', r.song_2 || '', r.song_2_artist || ''
+      ]);
+    });
+
+    downloadExcel(data, headers, 'Gruppi_e_Solisti_Sfida_Karaoke.xlsx');
+  }
+
+  async function exportSongs() {
+    const songs = await api('/songs');
+    const headers = ['Canzone', 'Artista', 'Cantata da', 'Società', 'Tipo', '#'];
+    const data = [];
+    songs.forEach(s => {
+      const who = s.type === 'gruppo' ? s.group_name : s.contact_name;
+      const company = s.company === 'ourfilms' ? 'Our Films' : 'Frame by Frame';
+      if (s.song_1) data.push([s.song_1, s.song_1_artist || '', who, company, s.type === 'gruppo' ? 'Gruppo' : 'Solista', '1']);
+      if (s.song_2) data.push([s.song_2, s.song_2_artist || '', who, company, s.type === 'gruppo' ? 'Gruppo' : 'Solista', '2']);
+    });
+    data.sort((a, b) => a[0].localeCompare(b[0]));
+    downloadExcel(data, headers, 'Canzoni_Sfida_Karaoke.xlsx');
   }
 
   // ===== SEND INVITES =====
