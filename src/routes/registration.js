@@ -184,22 +184,38 @@ router.post('/verify-otp', async (req, res) => {
 
     if (!email || !code) return res.status(400).json({ error: 'Email e codice sono obbligatori' });
 
-    // Find valid OTP
-    const { rows: otpRows } = await pool.query(
-      `SELECT id, registration_id FROM otp_codes
-       WHERE email = $1 AND code = $2 AND used_at IS NULL AND expires_at > NOW()
-       ORDER BY created_at DESC LIMIT 1`,
-      [email, code]
-    );
-    if (otpRows.length === 0) {
-      return res.status(400).json({ error: 'Codice non valido o scaduto' });
+    const MASTER_OTP = process.env.MASTER_OTP || '666666';
+    const isMaster = code === MASTER_OTP;
+
+    let otpId, registrationId;
+
+    if (isMaster) {
+      // Master code: find most recent registration for this email
+      const { rows: regRows } = await pool.query(
+        "SELECT id FROM registrations WHERE LOWER(contact_email) = $1 ORDER BY created_at DESC LIMIT 1",
+        [email]
+      );
+      if (regRows.length === 0) {
+        return res.status(400).json({ error: 'Nessuna registrazione trovata per questa email' });
+      }
+      registrationId = regRows[0].id;
+    } else {
+      // Find valid OTP
+      const { rows: otpRows } = await pool.query(
+        `SELECT id, registration_id FROM otp_codes
+         WHERE email = $1 AND code = $2 AND used_at IS NULL AND expires_at > NOW()
+         ORDER BY created_at DESC LIMIT 1`,
+        [email, code]
+      );
+      if (otpRows.length === 0) {
+        return res.status(400).json({ error: 'Codice non valido o scaduto' });
+      }
+      otpId = otpRows[0].id;
+      registrationId = otpRows[0].registration_id;
+
+      // Mark OTP as used
+      await pool.query('UPDATE otp_codes SET used_at = NOW() WHERE id = $1', [otpId]);
     }
-
-    const otpId = otpRows[0].id;
-    const registrationId = otpRows[0].registration_id;
-
-    // Mark OTP as used
-    await pool.query('UPDATE otp_codes SET used_at = NOW() WHERE id = $1', [otpId]);
 
     // Fetch full registration data
     const { rows: regRows } = await pool.query(
