@@ -16,13 +16,16 @@ function getResend() {
 router.get('/registration-status', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      "SELECT value FROM app_settings WHERE key = 'candidature_blocked'"
+      "SELECT key, value FROM app_settings WHERE key IN ('candidature_blocked', 'voting_button_enabled')"
     );
-    const blocked = rows.length > 0 && rows[0].value === 'true';
-    res.json({ candidature_blocked: blocked });
+    const settings = {};
+    rows.forEach(r => { settings[r.key] = r.value; });
+    res.json({
+      candidature_blocked: settings.candidature_blocked === 'true',
+      voting_button_enabled: settings.voting_button_enabled !== 'false', // default true
+    });
   } catch (err) {
-    // Table might not exist yet
-    res.json({ candidature_blocked: false });
+    res.json({ candidature_blocked: false, voting_button_enabled: true });
   }
 });
 
@@ -53,6 +56,33 @@ router.put('/settings/candidature-block', async (req, res) => {
     res.json({ success: true, candidature_blocked: !!blocked });
   } catch (err) {
     console.error('Settings update error:', err);
+    res.status(500).json({ error: 'Errore aggiornamento impostazioni' });
+  }
+});
+
+router.get('/settings/voting-button', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT value FROM app_settings WHERE key = 'voting_button_enabled'"
+    );
+    const enabled = !(rows.length > 0 && rows[0].value === 'false');
+    res.json({ voting_button_enabled: enabled });
+  } catch (err) {
+    res.json({ voting_button_enabled: true });
+  }
+});
+
+router.put('/settings/voting-button', async (req, res) => {
+  try {
+    const { enabled } = req.body;
+    await pool.query(
+      `INSERT INTO app_settings (key, value) VALUES ('voting_button_enabled', $1)
+       ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
+      [enabled ? 'true' : 'false']
+    );
+    res.json({ success: true, voting_button_enabled: !!enabled });
+  } catch (err) {
+    console.error('Voting button setting error:', err);
     res.status(500).json({ error: 'Errore aggiornamento impostazioni' });
   }
 });

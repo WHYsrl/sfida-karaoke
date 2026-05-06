@@ -858,10 +858,21 @@
     let otpEmail = null;
     let candidatureBlocked = false;
 
-    // Check if candidature are blocked
+    // Check registration status and voting button
     fetch('/api/admin/registration-status')
       .then(r => r.json())
       .then(data => {
+        // Voting button
+        const voteBtn = document.querySelector('.btn-vote-main');
+        if (voteBtn && !data.voting_button_enabled) {
+          voteBtn.style.opacity = '0.3';
+          voteBtn.style.pointerEvents = 'none';
+          voteBtn.style.animation = 'none';
+          voteBtn.style.boxShadow = 'none';
+          voteBtn.textContent = 'VOTAZIONI NON ANCORA ATTIVE';
+          voteBtn.style.fontSize = '16px';
+          voteBtn.removeAttribute('href');
+        }
         if (data.candidature_blocked) {
           candidatureBlocked = true;
           // Disable solista/gruppo radio buttons

@@ -341,6 +341,17 @@
       </button>
     </div>
 
+    <!-- Voting Button Toggle -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:16px;">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">Pulsante "Votazioni" (frontend)</div>
+        <div style="font-size:12px;color:var(--text-muted);" id="votingBtnStatusText">Stato: caricamento...</div>
+      </div>
+      <button id="votingBtnToggle" onclick="toggleVotingButton()" style="padding:10px 20px;border-radius:8px;border:none;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;">
+        Caricamento...
+      </button>
+    </div>
+
     <!-- Stats -->
     <div class="stats-grid" id="statsGrid"></div>
 
@@ -588,6 +599,7 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
         document.getElementById('mainHeader').classList.remove('hidden');
         document.getElementById('mainDashboard').classList.remove('hidden');
         loadBlockStatus();
+        loadVotingButtonStatus();
         loadDashboard();
       })
       .catch(() => {
@@ -639,6 +651,54 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
       if (res.ok) {
         candidatureBlocked = newState;
         updateBlockUI();
+      } else {
+        alert('Errore nell\'aggiornamento');
+      }
+    } catch (e) {
+      alert('Errore di connessione');
+    }
+  }
+
+  // ===== VOTING BUTTON TOGGLE =====
+  let votingButtonEnabled = true;
+
+  async function loadVotingButtonStatus() {
+    try {
+      const data = await api('/settings/voting-button');
+      votingButtonEnabled = data.voting_button_enabled;
+      updateVotingBtnUI();
+    } catch (e) { /* silent */ }
+  }
+
+  function updateVotingBtnUI() {
+    const btn = document.getElementById('votingBtnToggle');
+    const text = document.getElementById('votingBtnStatusText');
+    if (votingButtonEnabled) {
+      btn.textContent = 'Disabilita';
+      btn.style.background = 'var(--error)';
+      btn.style.color = '#fff';
+      text.innerHTML = 'Stato: <strong style="color:var(--success);">VISIBILE</strong> — gli utenti possono accedere alle votazioni';
+    } else {
+      btn.textContent = 'Abilita';
+      btn.style.background = 'var(--success)';
+      btn.style.color = '#fff';
+      text.innerHTML = 'Stato: <strong style="color:var(--error);">NASCOSTO</strong> — pulsante votazioni non visibile';
+    }
+  }
+
+  async function toggleVotingButton() {
+    const newState = !votingButtonEnabled;
+    const action = newState ? 'abilitare il pulsante votazioni' : 'disabilitare il pulsante votazioni';
+    if (!confirm(`Sei sicuro di voler ${action}?`)) return;
+    try {
+      const res = await fetch('/api/admin/settings/voting-button', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+        body: JSON.stringify({ enabled: newState }),
+      });
+      if (res.ok) {
+        votingButtonEnabled = newState;
+        updateVotingBtnUI();
       } else {
         alert('Errore nell\'aggiornamento');
       }
