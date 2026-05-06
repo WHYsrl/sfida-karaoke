@@ -527,6 +527,65 @@
       color: var(--gold);
     }
 
+    /* ===== LANDING BUTTONS ===== */
+    .btn-vote-main {
+      display: inline-block;
+      width: 100%;
+      padding: 20px 40px;
+      background: linear-gradient(135deg, #e94560, #ff6b6b, #ff8a65);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-decoration: none;
+      text-align: center;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: 0 4px 24px rgba(233,69,96,0.35);
+      animation: pulseGlow 2.5s ease-in-out infinite;
+    }
+    .btn-vote-main:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 36px rgba(233,69,96,0.5);
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 4px 24px rgba(233,69,96,0.35); }
+      50% { box-shadow: 0 4px 32px rgba(233,69,96,0.55); }
+    }
+    .btn-register-toggle {
+      margin-top: 8px;
+      padding: 10px 24px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: var(--text-secondary);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .btn-register-toggle:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+    .btn-back-landing {
+      padding: 8px 20px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: var(--text-secondary);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .btn-back-landing:hover { border-color: var(--gold); color: var(--gold); }
+
     .hidden { display: none !important; }
 
     /* ===== DIVIDER ===== */
@@ -593,7 +652,19 @@
     </div>
   </header>
 
-  <div class="container">
+  <!-- LANDING ACTIONS -->
+  <div class="container" id="landingActions">
+    <div style="text-align:center;padding:16px 0 8px;">
+      <a href="/vote.html" class="btn-vote-main">VOTAZIONI</a>
+      <p style="color:var(--text-dim);font-size:12px;margin-top:20px;">Vuoi partecipare come concorrente?</p>
+      <button class="btn-register-toggle" onclick="showRegistrationForm()">Registrati come partecipante</button>
+    </div>
+  </div>
+
+  <div class="container hidden" id="registrationContainer">
+    <div style="text-align:center;margin-bottom:16px;">
+      <button class="btn-back-landing" onclick="showLanding()">&larr; Torna indietro</button>
+    </div>
     <div id="alert" class="alert"></div>
 
     <!-- OTP VERIFICATION VIEW -->
@@ -745,7 +816,7 @@
         <span>Jackie'O, Roma</span>
       </div>
     </div>
-  </div>
+  </div><!-- /registrationContainer -->
 
   <footer>Sfida Karaoke 2026 &mdash; Our Films &amp; Frame by Frame</footer>
 
@@ -759,9 +830,27 @@
     const successView = document.getElementById('successView');
     const otpView = document.getElementById('otpView');
     const editBanner = document.getElementById('editBanner');
+    const landingActions = document.getElementById('landingActions');
+    const registrationContainer = document.getElementById('registrationContainer');
 
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
+
+    // If arriving with a token, go straight to registration
+    if (token) {
+      showRegistrationForm();
+    }
+
+    function showRegistrationForm() {
+      landingActions.classList.add('hidden');
+      registrationContainer.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function showLanding() {
+      registrationContainer.classList.add('hidden');
+      landingActions.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     // State
     let editMode = false;
