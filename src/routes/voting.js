@@ -215,9 +215,9 @@ router.get('/performers', voterAuth, async (req, res) => {
       const songNum = p.current_song_num || 1;
       const currentSong = songNum === 2 ? p.song_2 : p.song_1;
       const currentArtist = songNum === 2 ? p.song_2_artist : p.song_1_artist;
-      // For groups, include member names (but not emails for privacy)
+      // For groups, include contact (leader) + member names
       const memberNames = p.type === 'gruppo'
-        ? p.members.filter(m => m.name).map(m => m.name)
+        ? [p.contact_name, ...p.members.filter(m => m.name).map(m => m.name)].filter(Boolean)
         : [];
 
       return {
@@ -610,7 +610,7 @@ router.get('/admin/show-results', adminAuth, async (req, res) => {
 // ========== PUBLIC: full projector data (results + status) ==========
 router.get('/projector-data', async (req, res) => {
   try {
-    // Voting status + group members for open performers
+    // Voting status + group members for open performers (include contact_name for leader)
     const { rows: openPerformers } = await pool.query(`
       SELECT r.id, r.type, r.contact_name, r.group_name, r.company,
         r.song_1, r.song_1_artist, r.song_2, r.song_2_artist, r.current_song_num
@@ -682,7 +682,9 @@ router.get('/projector-data', async (req, res) => {
           company: p.company, type: p.type,
           song: sn === 2 ? p.song_2 : p.song_1,
           song_artist: sn === 2 ? p.song_2_artist : p.song_1_artist,
-          members: openMembersMap[p.id] || [],
+          members: p.type === 'gruppo'
+            ? [p.contact_name, ...(openMembersMap[p.id] || [])].filter(Boolean)
+            : [],
         };
       }),
       timer_ends_at: timerEndsAt,
