@@ -359,6 +359,27 @@
       showVotingArea();
     }
 
+    // ===== Auto re-login: riottiene un token senza interazione utente =====
+    async function autoReLogin() {
+      if (!voterEmail) return false;
+      try {
+        const res = await fetch(`${API}/quick-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: voterEmail })
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        voterToken = data.token;
+        localStorage.setItem('voter_token', voterToken);
+        console.log('[vote] Auto re-login riuscito');
+        return true;
+      } catch (e) {
+        console.error('[vote] Auto re-login fallito:', e);
+        return false;
+      }
+    }
+
     async function quickLogin() {
       const email = document.getElementById('emailInput').value.trim().toLowerCase();
       if (!email || !email.includes('@')) {
@@ -394,37 +415,88 @@
 
     let eventSource = null;
     let pollInterval = null;
+    let sseReconnectTimer = null;
+    let sseHeartbeatTimer = null;
+    let lastSseActivity = 0;
+    let loadPending = false;
+    let loadDebounceTimer = null;
 
     function showVotingArea() {
       document.getElementById('authEmail').classList.add('hidden');
       document.getElementById('votingArea').classList.remove('hidden');
       document.getElementById('voterEmailDisplay').textContent = voterEmail;
-      loadPerformers();
+      scheduleLoad();
       connectSSE();
       // Polling di backup ogni 15s (in caso SSE cada silenziosamente)
       if (pollInterval) clearInterval(pollInterval);
-      pollInterval = setInterval(loadPerformers, 15000);
+      pollInterval = setInterval(scheduleLoad, 15000);
+    }
+
+    // ===== Debounce: evita chiamate multiple simultanee =====
+    function scheduleLoad() {
+      if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+      loadDebounceTimer = setTimeout(() => {
+        loadDebounceTimer = null;
+        loadPerformers();
+      }, 300);
     }
 
     function connectSSE() {
-      if (eventSource) eventSource.close();
+      // Pulisci connessione precedente
+      if (eventSource) {
+        try { eventSource.close(); } catch(e) {}
+        eventSource = null;
+      }
+      if (sseReconnectTimer) { clearTimeout(sseReconnectTimer); sseReconnectTimer = null; }
+      if (sseHeartbeatTimer) { clearInterval(sseHeartbeatTimer); sseHeartbeatTimer = null; }
+
+      lastSseActivity = Date.now();
       eventSource = new EventSource(`${API}/events`);
-      eventSource.addEventListener('voting-changed', () => loadPerformers());
-      eventSource.addEventListener('timer-changed', () => loadPerformers());
-      eventSource.addEventListener('reset', () => loadPerformers());
-      eventSource.addEventListener('songs-changed', () => loadPerformers());
-      eventSource.addEventListener('force-reload', () => window.location.reload());
+
+      function onSseMessage() { lastSseActivity = Date.now(); }
+
+      eventSource.addEventListener('voting-changed', () => { onSseMessage(); scheduleLoad(); });
+      eventSource.addEventListener('timer-changed', () => { onSseMessage(); scheduleLoad(); });
+      eventSource.addEventListener('reset', () => { onSseMessage(); scheduleLoad(); });
+      eventSource.addEventListener('songs-changed', () => { onSseMessage(); scheduleLoad(); });
+      eventSource.addEventListener('force-reload', () => {
+        onSseMessage();
+        window.location.reload();
+      });
+      // Heartbeat comments dal server aggiornano onmessage
+      eventSource.onmessage = onSseMessage;
+      eventSource.onopen = onSseMessage;
+
       eventSource.onerror = () => {
-        eventSource.close();
-        setTimeout(connectSSE, 5000);
+        try { eventSource.close(); } catch(e) {}
+        eventSource = null;
+        // Riconnetti con backoff (3-8 secondi)
+        if (!sseReconnectTimer) {
+          const delay = 3000 + Math.random() * 5000;
+          sseReconnectTimer = setTimeout(() => {
+            sseReconnectTimer = null;
+            if (voterToken) connectSSE();
+          }, delay);
+        }
       };
+
+      // Heartbeat monitor: se nessuna attività SSE per 45s, forza riconnessione
+      sseHeartbeatTimer = setInterval(() => {
+        if (Date.now() - lastSseActivity > 45000) {
+          console.log('[vote] SSE heartbeat timeout, riconnessione...');
+          connectSSE();
+        }
+      }, 15000);
     }
 
     // Ricarica quando la pagina torna visibile (utente sblocca telefono o torna alla tab)
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && voterToken) {
-        loadPerformers();
-        connectSSE();
+        scheduleLoad();
+        // Riconnetti SSE solo se non attivo
+        if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
+          connectSSE();
+        }
       }
     });
 
@@ -433,26 +505,55 @@
       localStorage.removeItem('voter_email');
       voterToken = null;
       voterEmail = null;
-      if (eventSource) { eventSource.close(); eventSource = null; }
+      if (eventSource) { try { eventSource.close(); } catch(e) {} eventSource = null; }
       if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+      if (sseReconnectTimer) { clearTimeout(sseReconnectTimer); sseReconnectTimer = null; }
+      if (sseHeartbeatTimer) { clearInterval(sseHeartbeatTimer); sseHeartbeatTimer = null; }
       document.getElementById('votingArea').classList.add('hidden');
       document.getElementById('authEmail').classList.remove('hidden');
       document.getElementById('emailInput').value = '';
     }
 
     async function loadPerformers() {
+      if (loadPending) return; // evita chiamate sovrapposte
+      loadPending = true;
       try {
         const res = await fetch(`${API}/performers`, {
           headers: { 'X-Voter-Token': voterToken }
         });
-        if (res.status === 401) { logout(); return; }
-        const data = await res.json();
-        performers = Array.isArray(data) ? data : (data.performers || []);
+
+        if (res.status === 401) {
+          // Prova auto re-login prima di fare logout
+          const relogged = await autoReLogin();
+          if (relogged) {
+            // Riprova con il nuovo token
+            const res2 = await fetch(`${API}/performers`, {
+              headers: { 'X-Voter-Token': voterToken }
+            });
+            if (res2.status === 401) { logout(); return; }
+            const data2 = await res2.json();
+            performers = Array.isArray(data2) ? data2 : (data2.performers || []);
+          } else {
+            logout();
+            return;
+          }
+        } else if (!res.ok) {
+          // Errore server (500, etc.) — non fare logout, riprova dopo
+          console.warn('[vote] Server error', res.status, '— riproverò');
+          return;
+        } else {
+          const data = await res.json();
+          performers = Array.isArray(data) ? data : (data.performers || []);
+        }
+
         myVotes = {};
         performers.forEach(p => { if (p.my_vote) myVotes[p.id] = p.my_vote; });
         renderPerformers();
       } catch (e) {
-        console.error('Load performers error:', e);
+        // Errore di rete — non fare logout, il polling riproverà
+        console.error('[vote] Load performers network error:', e);
+      } finally {
+        loadPending = false;
       }
     }
 

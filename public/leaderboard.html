@@ -9,9 +9,9 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0a1628 100%);
-      min-height: 100vh; color: #fff; overflow: hidden;
+      min-height: 100vh; color: #fff;
     }
-    .screen { height: 100vh; display: flex; flex-direction: column; }
+    .screen { min-height: 100vh; display: flex; flex-direction: column; }
 
     /* ===== NAVBAR ===== */
     .navbar {
@@ -57,7 +57,7 @@
     .voter-count strong { color: #e94560; font-size: 1rem; }
 
     /* ===== MAIN CONTENT ===== */
-    .main { flex: 1; overflow: hidden; display: flex; flex-direction: column; padding: 20px 40px; }
+    .main { flex: 1; display: flex; flex-direction: column; padding: 20px 40px; }
 
     /* ===== VOTING OPEN SECTION ===== */
     .voting-section {
@@ -112,14 +112,14 @@
     .closed-banner.active { display: block; }
 
     /* ===== LEADERBOARD ===== */
-    .leaderboard { flex: 1; overflow: hidden; }
+    .leaderboard { flex: 1; }
     .lb-header {
       display: grid; grid-template-columns: 55px 44px 1fr 120px 120px 100px;
       padding: 9px 18px; background: rgba(255,255,255,0.04);
       border-radius: 10px 10px 0 0; font-size: 0.72rem; color: #666;
       text-transform: uppercase; letter-spacing: 1px;
     }
-    .lb-rows { overflow-y: auto; max-height: calc(100vh - 220px); }
+    .lb-rows { }
     .lb-row {
       display: grid; grid-template-columns: 55px 44px 1fr 120px 120px 100px;
       padding: 12px 18px; align-items: center;
