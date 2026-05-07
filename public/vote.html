@@ -214,29 +214,41 @@
       gap: 6px;
     }
     .star {
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 1.6rem;
       cursor: pointer;
       border-radius: 8px;
+      border: none;
+      background: rgba(255,255,255,0.06);
+      color: #666;
       transition: all 0.15s;
       -webkit-tap-highlight-color: transparent;
       user-select: none;
+      outline: none;
+      padding: 0;
+      font-family: inherit;
     }
-    .star:hover { transform: scale(1.15); }
-    .star.active { transform: scale(1.1); }
+    .star:active { transform: scale(0.9); }
+    .star.active {
+      transform: scale(1.05);
+      color: #ffd700;
+      background: rgba(255,215,0,0.15);
+    }
     .star.zero {
       font-size: 0.9rem;
       color: #666;
       border: 1px solid rgba(255,255,255,0.2);
-      width: 40px;
+      background: transparent;
+      width: 44px;
     }
     .star.zero.active {
       color: #ff6b6b;
       border-color: #ff6b6b;
+      background: rgba(255,107,107,0.1);
     }
 
     .submit-vote-btn {
@@ -577,14 +589,27 @@
     }
 
     function buildStars(performerId, type) {
-      let html = `<div class="star zero" data-performer="${performerId}" data-type="${type}" data-value="0" onclick="setRating(${performerId},'${type}',0)">0</div>`;
+      const current = ratings[performerId] ? ratings[performerId][type] : null;
+      let html = `<button type="button" class="star zero${current === 0 ? ' active' : ''}" data-performer="${performerId}" data-type="${type}" data-value="0">0</button>`;
       for (let i = 1; i <= 5; i++) {
-        html += `<div class="star" data-performer="${performerId}" data-type="${type}" data-value="${i}" onclick="setRating(${performerId},'${type}',${i})">&#9734;</div>`;
+        const filled = current !== null && i <= current;
+        html += `<button type="button" class="star${filled ? ' active' : ''}" data-performer="${performerId}" data-type="${type}" data-value="${i}">${filled ? '&#9733;' : '&#9734;'}</button>`;
       }
       return html;
     }
 
     const ratings = {}; // { performerId: { prep: N, perf: N } }
+
+    // Event delegation for star clicks — works reliably on mobile
+    document.addEventListener('click', function(e) {
+      const star = e.target.closest('.star');
+      if (!star) return;
+      e.preventDefault();
+      const pid = parseInt(star.dataset.performer);
+      const type = star.dataset.type;
+      const value = parseInt(star.dataset.value);
+      setRating(pid, type, value);
+    });
 
     function setRating(performerId, type, value) {
       if (!ratings[performerId]) ratings[performerId] = { prep: null, perf: null };
@@ -592,6 +617,7 @@
 
       // Update stars visual
       const container = document.getElementById(`stars-${type}-${performerId}`);
+      if (!container) return;
       container.querySelectorAll('.star').forEach(s => {
         const v = parseInt(s.dataset.value);
         if (v === 0) {
