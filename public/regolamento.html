@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Regolamento — Sfida Karaoke 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold: #c9a84c;
+      --gold-muted: rgba(201,168,76,0.15);
+      --bg: #0c0c0e;
+      --bg-card: rgba(14,14,16,0.88);
+      --text: #ffffff;
+      --text-secondary: #ccc8c0;
+      --text-dim: #908a7e;
+      --border: rgba(255,255,255,0.1);
+      --radius-lg: 16px;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    .page-wrapper {
+      min-height: 100vh;
+      background: url('/img/bg-karaoke2.jpg') center top / cover no-repeat fixed;
+      position: relative;
+    }
+    .page-wrapper::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: linear-gradient(to bottom,
+        rgba(12,12,14,0.25) 0%, rgba(12,12,14,0.45) 30%,
+        rgba(12,12,14,0.72) 60%, rgba(12,12,14,0.88) 100%);
+      pointer-events: none; z-index: 0;
+    }
+    .page-wrapper > * { position: relative; z-index: 1; }
+
+    /* HERO */
+    .hero {
+      text-align: center; padding: 48px 24px 32px;
+      background: rgba(0,0,0,0.55);
+      position: relative;
+    }
+    .hero::after {
+      content: ''; position: absolute; bottom: 0; left: 10%; right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(201,168,76,0.3), transparent);
+    }
+    .hero-eyebrow {
+      font-size: 11px; font-weight: 600; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 10px;
+    }
+    .hero h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(26px, 6vw, 38px); font-weight: 700;
+      color: #fff; letter-spacing: -0.5px; line-height: 1.2;
+    }
+    .hero h1 em { font-style: italic; color: var(--gold); }
+
+    /* CONTAINER */
+    .container {
+      max-width: 680px; margin: 8px auto 32px;
+      padding: 36px 32px 48px;
+      background: var(--bg-card);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    }
+
+    /* BACK LINK */
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--text-dim); font-size: 13px; text-decoration: none;
+      margin-bottom: 24px; transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--gold); }
+
+    /* CONTENT */
+    .reg-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 22px; font-weight: 700; color: var(--gold);
+      margin-bottom: 6px;
+    }
+    .reg-subtitle {
+      font-size: 13px; color: var(--text-dim); margin-bottom: 28px;
+    }
+
+    .premessa {
+      font-size: 14px; color: var(--text-secondary); line-height: 1.8;
+      margin-bottom: 28px; padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .article { margin-bottom: 28px; }
+    .article-title {
+      font-size: 11px; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .article-title::before {
+      content: ''; display: block; width: 3px; height: 14px;
+      background: var(--gold); border-radius: 2px; flex-shrink: 0;
+    }
+
+    .article-sub {
+      font-size: 12px; font-weight: 600; color: #fff;
+      text-transform: uppercase; letter-spacing: 1px;
+      margin: 16px 0 8px; padding-left: 11px;
+      border-left: 2px solid rgba(201,168,76,0.3);
+    }
+
+    .article p {
+      font-size: 14px; color: var(--text-secondary); line-height: 1.8;
+      margin-bottom: 10px;
+    }
+    .article .num {
+      color: var(--gold); font-weight: 600; font-size: 13px;
+      margin-right: 4px;
+    }
+
+    .article ul {
+      list-style: none; padding: 0; margin: 8px 0 10px;
+    }
+    .article ul li {
+      font-size: 14px; color: var(--text-secondary); line-height: 1.8;
+      padding-left: 18px; position: relative; margin-bottom: 4px;
+    }
+    .article ul li::before {
+      content: ''; position: absolute; left: 0; top: 11px;
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--gold); opacity: 0.6;
+    }
+
+    .divider {
+      height: 1px; margin: 28px 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    }
+
+    .closing {
+      text-align: center; padding-top: 8px;
+      font-size: 15px; color: var(--gold);
+      font-family: 'Playfair Display', Georgia, serif;
+      font-style: italic;
+    }
+    .closing .org {
+      display: block; margin-top: 4px;
+      font-size: 12px; color: var(--text-dim);
+      font-family: 'Inter', sans-serif; font-style: normal;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+
+    footer {
+      text-align: center; padding: 20px;
+      color: var(--text-dim); font-size: 11px; letter-spacing: 0.5px;
+    }
+
+    @media (max-width: 600px) {
+      .container { padding: 24px 16px 36px; margin-left: 8px; margin-right: 8px; border-radius: 12px; }
+      .hero { padding: 36px 20px 24px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <header class="hero">
+    <div class="hero-eyebrow">7 Maggio 2026 — Jackie'O, Roma</div>
+    <h1>Regolamento <em>Ufficiale</em></h1>
+  </header>
+
+  <div class="container">
+    <a href="/" class="back-link">&larr; Torna alla home</a>
+
+    <div class="reg-title">Sfida Karaoke 2026</div>
+    <div class="reg-subtitle">Our Films vs Frame by Frame</div>
+
+    <div class="premessa">
+      Il presente regolamento disciplina lo svolgimento della Sfida Karaoke 2026, concorso canoro amatoriale che vede sfidarsi le squadre di Our Films e Frame by Frame. L'evento si terrà mercoledì 7 maggio 2026 a partire dalle ore 19:30 presso il locale Jackie'O, Via Boncompagni 11, Roma. La partecipazione alla Sfida Karaoke implica la piena e incondizionata accettazione del presente regolamento.
+    </div>
+
+    <!-- Art. 1 -->
+    <div class="article">
+      <div class="article-title">Art. 1 — Partecipanti</div>
+      <p><span class="num">1.1</span> Possono partecipare alla Sfida Karaoke tutti coloro che rappresentano Our Films o Frame by Frame, regolarmente iscritti sulla piattaforma ufficiale.</p>
+      <p><span class="num">1.2</span> La partecipazione è consentita in tre modalità:</p>
+      <ul>
+        <li><strong>Solista:</strong> un singolo partecipante che si esibisce individualmente</li>
+        <li><strong>Gruppo:</strong> due o più partecipanti che si esibiscono insieme</li>
+        <li><strong>Pubblico:</strong> partecipanti che assistono all'evento senza esibirsi, ma con diritto di voto</li>
+      </ul>
+      <p><span class="num">1.3</span> Ciascun Solista o Gruppo può appartenere a una sola società (Our Films oppure Frame by Frame).</p>
+    </div>
+
+    <!-- Art. 2 -->
+    <div class="article">
+      <div class="article-title">Art. 2 — Iscrizione e scelta delle canzoni</div>
+      <p><span class="num">2.1</span> L'iscrizione avviene esclusivamente tramite la piattaforma ufficiale. Non sono ammesse iscrizioni in altra forma.</p>
+      <p><span class="num">2.2</span> In fase di registrazione, ciascun Solista o Gruppo deve indicare due canzoni:</p>
+      <ul>
+        <li><strong>Canzone 1</strong> (fase eliminatoria): il brano con cui il partecipante si esibirà nella prima fase della competizione</li>
+        <li><strong>Canzone 2</strong> (eventuale finale): il brano riservato all'eventuale esibizione in finale</li>
+      </ul>
+      <p><span class="num">2.3</span> Le canzoni indicate in fase di registrazione sono definitive e non potranno essere modificate dopo la chiusura delle iscrizioni.</p>
+    </div>
+
+    <!-- Art. 3 -->
+    <div class="article">
+      <div class="article-title">Art. 3 — Svolgimento della gara</div>
+
+      <div class="article-sub">Fase eliminatoria</div>
+      <p><span class="num">3.1</span> Nella fase eliminatoria, ciascun Solista o Gruppo si esibisce con la Canzone 1 indicata in fase di registrazione.</p>
+      <p><span class="num">3.2</span> L'ordine delle esibizioni verrà comunicato prima dell'inizio della gara e non è modificabile.</p>
+      <p><span class="num">3.3</span> Al termine della fase eliminatoria, il partecipante con il punteggio più alto per ciascuna società accede alla finale. Saranno dunque due finalisti: uno per Our Films e uno per Frame by Frame.</p>
+
+      <div class="article-sub">Finale</div>
+      <p><span class="num">3.4</span> I due finalisti si sfideranno esibendosi ciascuno con la Canzone 2 indicata in fase di registrazione.</p>
+    </div>
+
+    <!-- Art. 4 -->
+    <div class="article">
+      <div class="article-title">Art. 4 — Sistema di votazione</div>
+      <p><span class="num">4.1</span> Hanno diritto di voto tutti i partecipanti registrati sulla piattaforma (Solisti, Gruppi e Pubblico), a condizione di essere fisicamente presenti all'evento.</p>
+      <p><span class="num">4.2</span> La votazione avviene tramite la piattaforma ufficiale. Ciascun votante esprime un voto da 0 a 5 stelline su due categorie distinte:</p>
+      <ul>
+        <li><strong>Preparazione:</strong> valutazione dell'impegno profuso nella messa in scena. Include, a titolo esemplificativo: trucco e parrucco, abbigliamento o travestimento, coreografia, testo personalizzato, scelta di brano in lingua straniera</li>
+        <li><strong>Performance:</strong> valutazione della qualità effettiva dell'esibizione e della capacità canora dimostrata sul palco</li>
+      </ul>
+      <p><span class="num">4.3</span> Il punteggio finale di ciascun concorrente è dato dalla media dei voti ricevuti nelle due categorie.</p>
+      <p><span class="num">4.4</span> La votazione per ciascun concorrente si apre al termine della sua esibizione e si chiude alla fine dell'ultima esibizione della fase eliminatoria.</p>
+      <p><span class="num">4.5</span> Ogni votante può esprimere un solo voto per ciascun concorrente. Il voto, una volta confermato, è definitivo e non modificabile.</p>
+      <p><span class="num">4.6</span> È fatto divieto assoluto di votare per sé stessi. Nel caso di un Gruppo, nessun membro del Gruppo può votare per il proprio Gruppo.</p>
+    </div>
+
+    <!-- Art. 5 -->
+    <div class="article">
+      <div class="article-title">Art. 5 — Parità di punteggio</div>
+      <p><span class="num">5.1</span> In caso di parità di punteggio nella fase eliminatoria tra due o più concorrenti della stessa società, i partecipanti della società interessata avranno 5 minuti di tempo per accordarsi tra loro e designare chi li rappresenterà in finale.</p>
+      <p><span class="num">5.2</span> Qualora non si raggiunga un accordo entro il tempo stabilito, la decisione spetterà al DJ della serata, il cui giudizio è insindacabile.</p>
+    </div>
+
+    <!-- Art. 6 -->
+    <div class="article">
+      <div class="article-title">Art. 6 — Vincitore della finale</div>
+      <p><span class="num">6.1</span> Il vincitore assoluto della Sfida Karaoke sarà decretato a insindacabile giudizio del DJ della serata. Il DJ valuterà entrambi i finalisti tenendo conto sia della performance canora sia della preparazione e presenza scenica. La decisione del DJ è definitiva e inappellabile.</p>
+    </div>
+
+    <!-- Art. 7 -->
+    <div class="article">
+      <div class="article-title">Art. 7 — Norme di comportamento</div>
+      <p><span class="num">7.1</span> <strong>Puntualità:</strong> tutti i partecipanti sono tenuti a presentarsi con puntualità all'orario indicato.</p>
+      <p><span class="num">7.2</span> <strong>Rispetto:</strong> è vietato disturbare, deridere o interferire con le esibizioni degli altri concorrenti. Il pubblico e i partecipanti in attesa del proprio turno devono mantenere un comportamento rispettoso durante tutte le esibizioni.</p>
+      <p><span class="num">7.3</span> <strong>Fair play:</strong> la Sfida Karaoke è un evento a scopo ludico e di aggregazione. Lo spirito della competizione deve essere improntato al divertimento, alla sportività e al reciproco incoraggiamento.</p>
+    </div>
+
+    <!-- Art. 8 -->
+    <div class="article">
+      <div class="article-title">Art. 8 — Disposizioni finali</div>
+      <p><span class="num">8.1</span> Per qualsiasi situazione non espressamente prevista dal presente regolamento, la decisione spetta agli organizzatori dell'evento, il cui giudizio è insindacabile.</p>
+      <p><span class="num">8.2</span> Gli organizzatori si riservano la facoltà di modificare il presente regolamento in qualsiasi momento prima dell'evento, dandone comunicazione ai partecipanti registrati.</p>
+      <p><span class="num">8.3</span> La registrazione sulla piattaforma e la partecipazione all'evento costituiscono accettazione integrale del presente regolamento.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="closing">
+      Buona fortuna e buon divertimento a tutti!
+      <span class="org">Gli Organizzatori</span>
+    </div>
+  </div>
+
+  <footer>Sfida Karaoke 2026 — Our Films &amp; Frame by Frame</footer>
+
+</div>
+</body>
+</html>
