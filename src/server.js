@@ -31,8 +31,15 @@ app.use(express.urlencoded({ extended: true }));
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, message: { error: 'Troppe richieste, riprova tra poco.' } });
 app.use('/api/', apiLimiter);
 
-// Static files
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// Static files — no cache on HTML
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+    }
+  }
+}));
 
 // API Routes
 app.use('/api/register', registrationRoutes);

@@ -525,6 +525,7 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
           <button onclick="votingBulkAction('close')" style="padding:8px 16px;border-radius:8px;border:none;background:var(--error);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">Chiudi tutte</button>
           <button onclick="showTimerModal()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--warning);color:#000;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">Timer</button>
           <button onclick="resetAllVotes()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--error);background:transparent;color:var(--error);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">Reset voti</button>
+          <button onclick="forceReloadClients()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--info);background:transparent;color:var(--info);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">Aggiorna tutti i client</button>
         </div>
       </div>
       <div id="votingTimer" style="display:none;margin-top:12px;padding:12px;background:rgba(245,158,11,0.1);border:1px solid var(--warning);border-radius:8px;text-align:center;">
@@ -1729,6 +1730,16 @@ Laura Bianchi, laura@framebyframe.it, framebyframe
       cancelTimer(true);
       alert(`Reset completato. ${res.deleted || 0} voti eliminati.`);
       loadVotingTab();
+    } catch (e) {
+      alert('Errore: ' + e.message);
+    }
+  }
+
+  // ===== FORCE RELOAD ALL CLIENTS =====
+  async function forceReloadClients() {
+    try {
+      const res = await voteApi('/force-reload', { method: 'POST' });
+      alert(`Comando inviato a ${res.clients || 0} client connessi. Le pagine si ricaricheranno.`);
     } catch (e) {
       alert('Errore: ' + e.message);
     }

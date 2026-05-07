@@ -385,6 +385,7 @@
       es.addEventListener('results-changed', () => fetchAll());
       es.addEventListener('reset', () => fetchAll());
       es.addEventListener('songs-changed', () => fetchAll());
+      es.addEventListener('force-reload', () => window.location.reload());
       es.onerror = () => { es.close(); setTimeout(connectSSE, 5000); };
     }
     connectSSE();

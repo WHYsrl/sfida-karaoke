@@ -41,6 +41,12 @@ function broadcast(event = 'update', data = {}) {
   }
 }
 
+// ========== ADMIN: Force reload all clients ==========
+router.post('/admin/force-reload', adminAuth, (req, res) => {
+  broadcast('force-reload');
+  res.json({ success: true, clients: sseClients.size });
+});
+
 // ========== VOTER AUTH: Quick login (no OTP) ==========
 router.post('/quick-login', async (req, res) => {
   try {

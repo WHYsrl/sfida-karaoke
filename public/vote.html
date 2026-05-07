@@ -413,6 +413,7 @@
       eventSource.addEventListener('timer-changed', () => loadPerformers());
       eventSource.addEventListener('reset', () => loadPerformers());
       eventSource.addEventListener('songs-changed', () => loadPerformers());
+      eventSource.addEventListener('force-reload', () => window.location.reload());
       eventSource.onerror = () => {
         eventSource.close();
         setTimeout(connectSSE, 5000);
