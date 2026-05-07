@@ -112,17 +112,27 @@
     .closed-banner.active { display: block; }
 
     /* ===== LEADERBOARD ===== */
-    .leaderboard { flex: 1; }
+    .leaderboard { flex: 1; display: flex; gap: 30px; }
+    .lb-column { flex: 1; }
+    .lb-column-title {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 12px; padding: 10px 18px;
+      background: rgba(255,255,255,0.04); border-radius: 12px;
+    }
+    .lb-column-title img { height: 30px; width: auto; border-radius: 4px; }
+    .lb-column-title span { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px; }
+    .lb-column.ourfilms .lb-column-title { border: 1px solid rgba(255,255,255,0.15); }
+    .lb-column.framebyframe .lb-column-title { border: 1px solid rgba(233,69,96,0.3); }
     .lb-header {
-      display: grid; grid-template-columns: 55px 44px 1fr 120px 120px 100px;
-      padding: 9px 18px; background: rgba(255,255,255,0.04);
-      border-radius: 10px 10px 0 0; font-size: 0.72rem; color: #666;
+      display: grid; grid-template-columns: 45px 1fr 90px 90px 80px;
+      padding: 9px 14px; background: rgba(255,255,255,0.03);
+      border-radius: 10px 10px 0 0; font-size: 0.68rem; color: #666;
       text-transform: uppercase; letter-spacing: 1px;
     }
     .lb-rows { }
     .lb-row {
-      display: grid; grid-template-columns: 55px 44px 1fr 120px 120px 100px;
-      padding: 12px 18px; align-items: center;
+      display: grid; grid-template-columns: 45px 1fr 90px 90px 80px;
+      padding: 11px 14px; align-items: center;
       border-bottom: 1px solid rgba(255,255,255,0.04); transition: all 0.4s;
     }
     .lb-row:nth-child(1) { background: rgba(255,215,0,0.07); }
@@ -132,15 +142,13 @@
     .lb-row:nth-child(1) .lb-rank { color:#ffd700; }
     .lb-row:nth-child(2) .lb-rank { color:#c0c0c0; }
     .lb-row:nth-child(3) .lb-rank { color:#cd7f32; }
-    .lb-logo { text-align:center; }
-    .lb-logo img { height:26px; width:auto; border-radius:3px; }
-    .lb-name-col { padding-left: 8px; }
-    .lb-name { font-size:1.05rem; font-weight:600; }
-    .lb-sub { font-size:0.68rem; color:#666; margin-top:1px; }
-    .lb-score { text-align:center; font-size:1rem; }
-    .lb-score .label { font-size:0.6rem; color:#666; display:block; }
+    .lb-name-col { padding-left: 4px; }
+    .lb-name { font-size:1rem; font-weight:600; }
+    .lb-sub { font-size:0.65rem; color:#666; margin-top:1px; }
+    .lb-score { text-align:center; font-size:0.95rem; }
+    .lb-score .label { font-size:0.55rem; color:#666; display:block; }
     .lb-media {
-      text-align:center; font-size:1.3rem; font-weight:700;
+      text-align:center; font-size:1.2rem; font-weight:700;
       background: linear-gradient(135deg, #e94560, #ff6b6b);
       -webkit-background-clip:text; -webkit-text-fill-color:transparent;
     }
@@ -215,15 +223,36 @@
 
       <!-- Leaderboard -->
       <div id="leaderboard" class="leaderboard hidden">
-        <div class="lb-header">
-          <div>#</div>
-          <div></div>
-          <div>Artista</div>
-          <div style="text-align:center">Preparazione</div>
-          <div style="text-align:center">Performance</div>
-          <div style="text-align:center">Media</div>
+        <!-- Our Films -->
+        <div class="lb-column ourfilms">
+          <div class="lb-column-title">
+            <img src="/img/ourfilms.png" alt="Our Films">
+            <span>Our Films</span>
+          </div>
+          <div class="lb-header">
+            <div>#</div>
+            <div>Artista</div>
+            <div style="text-align:center">Prep</div>
+            <div style="text-align:center">Perf</div>
+            <div style="text-align:center">Media</div>
+          </div>
+          <div class="lb-rows" id="lbRowsOurfilms"></div>
         </div>
-        <div class="lb-rows" id="lbRows"></div>
+        <!-- Frame by Frame -->
+        <div class="lb-column framebyframe">
+          <div class="lb-column-title">
+            <img src="/img/framebyframe.png" alt="Frame by Frame">
+            <span>Frame by Frame</span>
+          </div>
+          <div class="lb-header">
+            <div>#</div>
+            <div>Artista</div>
+            <div style="text-align:center">Prep</div>
+            <div style="text-align:center">Perf</div>
+            <div style="text-align:center">Media</div>
+          </div>
+          <div class="lb-rows" id="lbRowsFbf"></div>
+        </div>
       </div>
     </div>
 
@@ -352,10 +381,17 @@
     }
 
     function renderLB(data) {
-      document.getElementById('lbRows').innerHTML = data.map((r, i) => `
+      const ourfilms = data.filter(r => r.company === 'ourfilms');
+      const fbf = data.filter(r => r.company === 'framebyframe');
+
+      document.getElementById('lbRowsOurfilms').innerHTML = renderColumn(ourfilms);
+      document.getElementById('lbRowsFbf').innerHTML = renderColumn(fbf);
+    }
+
+    function renderColumn(items) {
+      return items.map((r, i) => `
         <div class="lb-row">
           <div class="lb-rank">${i+1}</div>
-          <div class="lb-logo"><img src="${logo(r.company)}" alt=""></div>
           <div class="lb-name-col">
             <div class="lb-name">${esc(r.name)}</div>
             <div class="lb-sub">${r.type==='solista'?'Solista':'Gruppo'} &bull; ${r.vote_count} voti</div>
