@@ -150,6 +150,25 @@
     .waiting .icon { font-size:4rem; margin-bottom:16px; }
     .waiting p { font-size:1.1rem; }
 
+    /* QR Code */
+    .qr-section {
+      position: fixed; bottom: 24px; right: 40px;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      z-index: 100;
+    }
+    .qr-box {
+      background: #fff; border-radius: 16px; padding: 14px;
+      box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    }
+    .qr-box canvas { display: block; }
+    .qr-label {
+      font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.5px; color: #fff;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    .qr-label .arrow { font-size: 1.2rem; display: block; margin-bottom: 2px; }
+
     .hidden { display:none !important; }
     .lb-rows::-webkit-scrollbar { width:3px; }
     .lb-rows::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:3px; }
@@ -207,9 +226,26 @@
         <div class="lb-rows" id="lbRows"></div>
       </div>
     </div>
+
+    <!-- QR CODE -->
+    <div class="qr-section" id="qrSection">
+      <div class="qr-label"><span class="arrow">↑</span>INQUADRA PER VOTARE</div>
+      <div class="qr-box"><canvas id="qrCanvas"></canvas></div>
+    </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
   <script>
+    // Generate QR code pointing to the vote page
+    new QRious({
+      element: document.getElementById('qrCanvas'),
+      value: window.location.origin + '/vote.html',
+      size: 180,
+      level: 'M',
+      background: '#ffffff',
+      foreground: '#0a0a1a',
+    });
+
     const API = '/api/vote';
     let currentTimerEnd = null;
     let timerTick = null;
