@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Vota - Sfida Karaoke 2026</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      color: #fff;
+      padding: 16px;
+      padding-bottom: 100px;
+    }
+    .container { max-width: 480px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 20px 0;
+    }
+    .header h1 {
+      font-size: 1.6rem;
+      background: linear-gradient(90deg, #e94560, #ff6b6b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+    .header p { color: #aaa; font-size: 0.85rem; }
+
+    /* Auth Section */
+    .auth-section {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 16px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .auth-section h2 {
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .input-group { margin-bottom: 16px; }
+    .input-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-group input:focus {
+      border-color: #e94560;
+    }
+    .input-group input::placeholder { color: #666; }
+
+    .otp-inputs {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin: 16px 0;
+    }
+    .otp-inputs input {
+      width: 48px;
+      height: 56px;
+      text-align: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      outline: none;
+    }
+    .otp-inputs input:focus { border-color: #e94560; }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #e94560, #ff6b6b);
+      color: #fff;
+    }
+    .btn-primary:hover { transform: scale(1.02); }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      transform: none;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+      margin-top: 10px;
+    }
+
+    /* Voting Section */
+    .voting-section { margin-top: 20px; }
+    .voter-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+    }
+    .voter-info .email { color: #e94560; }
+    .voter-info .logout {
+      color: #aaa;
+      cursor: pointer;
+      text-decoration: underline;
+      font-size: 0.8rem;
+    }
+
+    /* Performer Card */
+    .performer-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: all 0.3s;
+    }
+    .performer-card.closed {
+      opacity: 0.5;
+    }
+    .performer-card.voted {
+      border-color: #4ecdc4;
+    }
+    .performer-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .performer-meta {
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-bottom: 12px;
+    }
+    .performer-members {
+      font-size: 0.8rem;
+      color: #999;
+      margin-bottom: 6px;
+    }
+    .performer-members span {
+      display: inline;
+    }
+    .performer-song {
+      font-size: 0.85rem;
+      color: #ccc;
+      font-style: italic;
+      margin-bottom: 16px;
+    }
+    .voting-closed-label {
+      text-align: center;
+      color: #ff6b6b;
+      font-size: 0.85rem;
+      padding: 8px;
+      background: rgba(233,69,96,0.1);
+      border-radius: 8px;
+    }
+    .voted-label {
+      text-align: center;
+      color: #4ecdc4;
+      font-size: 0.85rem;
+      padding: 8px;
+      background: rgba(78,205,196,0.1);
+      border-radius: 8px;
+    }
+    .self-vote-label {
+      text-align: center;
+      color: #ffa500;
+      font-size: 0.85rem;
+      padding: 8px;
+      background: rgba(255,165,0,0.1);
+      border-radius: 8px;
+    }
+
+    /* Star Rating */
+    .rating-section { margin-bottom: 14px; }
+    .rating-label {
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stars {
+      display: flex;
+      gap: 6px;
+    }
+    .star {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      cursor: pointer;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255,255,255,0.06);
+      color: #666;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      outline: none;
+      padding: 0;
+      font-family: inherit;
+    }
+    .star:active { transform: scale(0.9); }
+    .star.active {
+      transform: scale(1.05);
+      color: #ffd700;
+      background: rgba(255,215,0,0.15);
+    }
+    .star.zero {
+      font-size: 0.9rem;
+      color: #666;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: transparent;
+      width: 44px;
+    }
+    .star.zero.active {
+      color: #ff6b6b;
+      border-color: #ff6b6b;
+      background: rgba(255,107,107,0.1);
+    }
+
+    .submit-vote-btn {
+      margin-top: 12px;
+      padding: 12px;
+      font-size: 0.9rem;
+    }
+
+    /* Messages */
+    .message {
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin: 12px 0;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+    .message.error {
+      background: rgba(233,69,96,0.15);
+      color: #ff6b6b;
+      border: 1px solid rgba(233,69,96,0.3);
+    }
+    .message.success {
+      background: rgba(78,205,196,0.15);
+      color: #4ecdc4;
+      border: 1px solid rgba(78,205,196,0.3);
+    }
+    .message.info {
+      background: rgba(100,149,237,0.15);
+      color: #6495ed;
+      border: 1px solid rgba(100,149,237,0.3);
+    }
+
+    /* No performers */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #aaa;
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+
+    /* Loading */
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Leaderboard link */
+    .leaderboard-link {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      color: #6495ed;
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+    .leaderboard-link:hover { text-decoration: underline; }
+
+    /* Hide sections */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Sfida Karaoke 2026</h1>
+      <p>Jackie'O &bull; 7 Maggio 2026</p>
+    </div>
+
+    <!-- Auth: Email (direct login, no OTP) -->
+    <div id="authEmail" class="auth-section">
+      <h2>Accedi per votare</h2>
+      <div class="input-group">
+        <label>La tua email</label>
+        <input type="email" id="emailInput" placeholder="nome@esempio.it" autocomplete="email" inputmode="email">
+      </div>
+      <div id="authEmailMsg"></div>
+      <button class="btn btn-primary" id="loginBtn" onclick="quickLogin()">Accedi</button>
+    </div>
+
+    <!-- Voting Area -->
+    <div id="votingArea" class="voting-section hidden">
+      <div class="voter-info">
+        <span class="email" id="voterEmailDisplay"></span>
+        <span class="logout" onclick="logout()">Esci</span>
+      </div>
+      <div id="performersList"></div>
+      <a href="leaderboard.html" class="leaderboard-link" target="_blank">Classifica live &rarr;</a>
+    </div>
+  </div>
+
+  <script>
+    const API = '/api/vote';
+    let voterToken = localStorage.getItem('voter_token');
+    let voterEmail = localStorage.getItem('voter_email');
+    let performers = [];
+    let myVotes = {};
+
+    // Check if already authenticated
+    if (voterToken && voterEmail) {
+      showVotingArea();
+    }
+
+    // ===== Auto re-login: riottiene un token senza interazione utente =====
+    async function autoReLogin() {
+      if (!voterEmail) return false;
+      try {
+        const res = await fetch(`${API}/quick-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: voterEmail })
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        voterToken = data.token;
+        localStorage.setItem('voter_token', voterToken);
+        console.log('[vote] Auto re-login riuscito');
+        return true;
+      } catch (e) {
+        console.error('[vote] Auto re-login fallito:', e);
+        return false;
+      }
+    }
+
+    async function quickLogin() {
+      const email = document.getElementById('emailInput').value.trim().toLowerCase();
+      if (!email || !email.includes('@')) {
+        showMsg('authEmailMsg', 'Inserisci un indirizzo email valido', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Accesso...';
+
+      try {
+        const res = await fetch(`${API}/quick-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Errore');
+
+        voterToken = data.token;
+        voterEmail = email;
+        localStorage.setItem('voter_token', voterToken);
+        localStorage.setItem('voter_email', voterEmail);
+        showVotingArea();
+      } catch (e) {
+        showMsg('authEmailMsg', e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Accedi';
+      }
+    }
+
+    let eventSource = null;
+    let pollInterval = null;
+    let sseReconnectTimer = null;
+    let sseHeartbeatTimer = null;
+    let lastSseActivity = 0;
+    let loadPending = false;
+    let loadDebounceTimer = null;
+
+    function showVotingArea() {
+      document.getElementById('authEmail').classList.add('hidden');
+      document.getElementById('votingArea').classList.remove('hidden');
+      document.getElementById('voterEmailDisplay').textContent = voterEmail;
+      scheduleLoad();
+      connectSSE();
+      // Polling di backup ogni 15s (in caso SSE cada silenziosamente)
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(scheduleLoad, 15000);
+    }
+
+    // ===== Debounce: evita chiamate multiple simultanee =====
+    function scheduleLoad() {
+      if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+      loadDebounceTimer = setTimeout(() => {
+        loadDebounceTimer = null;
+        loadPerformers();
+      }, 300);
+    }
+
+    function connectSSE() {
+      // Pulisci connessione precedente
+      if (eventSource) {
+        try { eventSource.close(); } catch(e) {}
+        eventSource = null;
+      }
+      if (sseReconnectTimer) { clearTimeout(sseReconnectTimer); sseReconnectTimer = null; }
+      if (sseHeartbeatTimer) { clearInterval(sseHeartbeatTimer); sseHeartbeatTimer = null; }
+
+      lastSseActivity = Date.now();
+      eventSource = new EventSource(`${API}/events`);
+
+      function onSseMessage() { lastSseActivity = Date.now(); }
+
+      eventSource.addEventListener('voting-changed', () => { onSseMessage(); scheduleLoad(); });
+      eventSource.addEventListener('timer-changed', () => { onSseMessage(); scheduleLoad(); });
+      eventSource.addEventListener('reset', () => { onSseMessage(); scheduleLoad(); });
+      eventSource.addEventListener('songs-changed', () => { onSseMessage(); scheduleLoad(); });
+      eventSource.addEventListener('force-reload', () => {
+        onSseMessage();
+        window.location.reload();
+      });
+      // Heartbeat comments dal server aggiornano onmessage
+      eventSource.onmessage = onSseMessage;
+      eventSource.onopen = onSseMessage;
+
+      eventSource.onerror = () => {
+        try { eventSource.close(); } catch(e) {}
+        eventSource = null;
+        // Riconnetti con backoff (3-8 secondi)
+        if (!sseReconnectTimer) {
+          const delay = 3000 + Math.random() * 5000;
+          sseReconnectTimer = setTimeout(() => {
+            sseReconnectTimer = null;
+            if (voterToken) connectSSE();
+          }, delay);
+        }
+      };
+
+      // Heartbeat monitor: se nessuna attività SSE per 45s, forza riconnessione
+      sseHeartbeatTimer = setInterval(() => {
+        if (Date.now() - lastSseActivity > 45000) {
+          console.log('[vote] SSE heartbeat timeout, riconnessione...');
+          connectSSE();
+        }
+      }, 15000);
+    }
+
+    // Ricarica quando la pagina torna visibile (utente sblocca telefono o torna alla tab)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && voterToken) {
+        scheduleLoad();
+        // Riconnetti SSE solo se non attivo
+        if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
+          connectSSE();
+        }
+      }
+    });
+
+    function logout() {
+      localStorage.removeItem('voter_token');
+      localStorage.removeItem('voter_email');
+      voterToken = null;
+      voterEmail = null;
+      if (eventSource) { try { eventSource.close(); } catch(e) {} eventSource = null; }
+      if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+      if (sseReconnectTimer) { clearTimeout(sseReconnectTimer); sseReconnectTimer = null; }
+      if (sseHeartbeatTimer) { clearInterval(sseHeartbeatTimer); sseHeartbeatTimer = null; }
+      document.getElementById('votingArea').classList.add('hidden');
+      document.getElementById('authEmail').classList.remove('hidden');
+      document.getElementById('emailInput').value = '';
+    }
+
+    async function loadPerformers() {
+      if (loadPending) return; // evita chiamate sovrapposte
+      loadPending = true;
+      try {
+        const res = await fetch(`${API}/performers`, {
+          headers: { 'X-Voter-Token': voterToken }
+        });
+
+        if (res.status === 401) {
+          // Prova auto re-login prima di fare logout
+          const relogged = await autoReLogin();
+          if (relogged) {
+            // Riprova con il nuovo token
+            const res2 = await fetch(`${API}/performers`, {
+              headers: { 'X-Voter-Token': voterToken }
+            });
+            if (res2.status === 401) { logout(); return; }
+            const data2 = await res2.json();
+            performers = Array.isArray(data2) ? data2 : (data2.performers || []);
+          } else {
+            logout();
+            return;
+          }
+        } else if (!res.ok) {
+          // Errore server (500, etc.) — non fare logout, riprova dopo
+          console.warn('[vote] Server error', res.status, '— riproverò');
+          return;
+        } else {
+          const data = await res.json();
+          performers = Array.isArray(data) ? data : (data.performers || []);
+        }
+
+        myVotes = {};
+        performers.forEach(p => { if (p.my_vote) myVotes[p.id] = p.my_vote; });
+        renderPerformers();
+      } catch (e) {
+        // Errore di rete — non fare logout, il polling riproverà
+        console.error('[vote] Load performers network error:', e);
+      } finally {
+        loadPending = false;
+      }
+    }
+
+    function renderPerformers() {
+      const container = document.getElementById('performersList');
+      if (!performers.length) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">🎤</div><p>Nessun artista in gara al momento.<br>Attendi l'apertura delle votazioni.</p></div>`;
+        return;
+      }
+
+      // Sort: open & not voted & not self first, then voted/self, then closed
+      const sorted = [...performers].sort((a, b) => {
+        const priority = (p) => {
+          const voted = !!myVotes[p.id];
+          if (p.voting_open && !voted && !p.is_self) return 0; // open to vote
+          if (voted) return 1; // already voted
+          if (p.is_self) return 2; // self
+          return 3; // closed
+        };
+        return priority(a) - priority(b);
+      });
+
+      container.innerHTML = sorted.map(p => {
+        const voted = myVotes[p.id];
+        const isSelf = p.is_self;
+        const isOpen = p.voting_open;
+
+        let statusHtml = '';
+        if (isSelf) {
+          statusHtml = `<div class="self-vote-label">Non puoi votare te stesso</div>`;
+        } else if (voted) {
+          statusHtml = `<div class="voted-label">Votato: Preparazione ${voted.score_preparation}/5 &bull; Performance ${voted.score_performance}/5</div>`;
+        } else if (!isOpen) {
+          statusHtml = `<div class="voting-closed-label">Votazione non ancora aperta</div>`;
+        } else {
+          statusHtml = buildRatingUI(p.id);
+        }
+
+        const cardClass = isSelf ? 'closed' : (voted ? 'voted' : (!isOpen ? 'closed' : ''));
+
+        const membersHtml = p.members && p.members.length
+          ? `<div class="performer-members">👥 ${p.members.map(m => escHtml(m)).join(', ')}</div>`
+          : '';
+
+        return `
+          <div class="performer-card ${cardClass}" data-id="${p.id}">
+            <div class="performer-name">${escHtml(p.name)}</div>
+            <div class="performer-meta"><img src="/img/${p.company === 'ourfilms' ? 'ourfilms' : 'framebyframe'}.png" style="height:16px;vertical-align:middle;border-radius:2px;margin-right:4px;opacity:0.9;"> ${p.type === 'solista' ? 'Solista' : 'Gruppo'}</div>
+            ${membersHtml}
+            ${p.song ? `<div class="performer-song">"${escHtml(p.song)}"${p.song_artist ? ` — ${escHtml(p.song_artist)}` : ''}</div>` : ''}
+            ${statusHtml}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function buildRatingUI(performerId) {
+      return `
+        <div class="rating-section">
+          <div class="rating-label">Preparazione</div>
+          <div class="stars" id="stars-prep-${performerId}">
+            ${buildStars(performerId, 'prep')}
+          </div>
+        </div>
+        <div class="rating-section">
+          <div class="rating-label">Performance</div>
+          <div class="stars" id="stars-perf-${performerId}">
+            ${buildStars(performerId, 'perf')}
+          </div>
+        </div>
+        <button class="btn btn-primary submit-vote-btn" id="submit-${performerId}" onclick="castVote(${performerId})">Conferma voto</button>
+        <div id="vote-msg-${performerId}"></div>
+      `;
+    }
+
+    function buildStars(performerId, type) {
+      const current = ratings[performerId] ? ratings[performerId][type] : null;
+      let html = `<button type="button" class="star zero${current === 0 ? ' active' : ''}" data-performer="${performerId}" data-type="${type}" data-value="0">0</button>`;
+      for (let i = 1; i <= 5; i++) {
+        const filled = current !== null && i <= current;
+        html += `<button type="button" class="star${filled ? ' active' : ''}" data-performer="${performerId}" data-type="${type}" data-value="${i}">${filled ? '&#9733;' : '&#9734;'}</button>`;
+      }
+      return html;
+    }
+
+    const ratings = {}; // { performerId: { prep: N, perf: N } }
+
+    // Event delegation for star clicks — works reliably on mobile
+    document.addEventListener('click', function(e) {
+      const star = e.target.closest('.star');
+      if (!star) return;
+      e.preventDefault();
+      const pid = parseInt(star.dataset.performer);
+      const type = star.dataset.type;
+      const value = parseInt(star.dataset.value);
+      setRating(pid, type, value);
+    });
+
+    function setRating(performerId, type, value) {
+      if (!ratings[performerId]) ratings[performerId] = { prep: null, perf: null };
+      ratings[performerId][type] = value;
+
+      // Update stars visual
+      const container = document.getElementById(`stars-${type}-${performerId}`);
+      if (!container) return;
+      container.querySelectorAll('.star').forEach(s => {
+        const v = parseInt(s.dataset.value);
+        if (v === 0) {
+          s.classList.toggle('active', value === 0);
+        } else {
+          s.classList.toggle('active', v <= value);
+          s.innerHTML = v <= value ? '&#9733;' : '&#9734;';
+        }
+      });
+    }
+
+    async function castVote(performerId) {
+      const r = ratings[performerId];
+      if (!r || r.prep === null || r.perf === null) {
+        showMsg(`vote-msg-${performerId}`, 'Seleziona un voto per entrambe le categorie', 'error');
+        return;
+      }
+
+      const btn = document.getElementById(`submit-${performerId}`);
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Invio...';
+
+      try {
+        const res = await fetch(`${API}/cast`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Voter-Token': voterToken
+          },
+          body: JSON.stringify({
+            registration_id: performerId,
+            score_preparation: r.prep,
+            score_performance: r.perf
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Errore');
+
+        // Refresh to show voted state
+        myVotes[performerId] = {
+          registration_id: performerId,
+          score_preparation: r.prep,
+          score_performance: r.perf
+        };
+        renderPerformers();
+      } catch (e) {
+        showMsg(`vote-msg-${performerId}`, e.message, 'error');
+        btn.disabled = false;
+        btn.textContent = 'Conferma voto';
+      }
+    }
+
+    function showMsg(containerId, text, type) {
+      const el = document.getElementById(containerId);
+      if (el) {
+        el.innerHTML = `<div class="message ${type}">${escHtml(text)}</div>`;
+        setTimeout(() => { el.innerHTML = ''; }, 5000);
+      }
+    }
+
+    function escHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Enter key handler
+    document.getElementById('emailInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') quickLogin();
+    });
+  </script>
+</body>
+</html>

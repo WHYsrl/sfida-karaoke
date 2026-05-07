@@ -76,6 +76,13 @@ app.get('/px/:token', async (req, res) => {
   res.send(pixel);
 });
 
+// Clean URL: /vota → vota.html
+app.get('/vota', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.sendFile(path.join(__dirname, '..', 'public', 'vota.html'));
+});
+
 // SPA fallback
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
