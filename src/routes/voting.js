@@ -41,7 +41,28 @@ function broadcast(event = 'update', data = {}) {
   }
 }
 
-// ========== VOTER AUTH: Request OTP ==========
+// ========== VOTER AUTH: Quick login (no OTP) ==========
+router.post('/quick-login', async (req, res) => {
+  try {
+    const email = (req.body.email || '').trim().toLowerCase();
+    if (!email || !email.includes('@')) return res.status(400).json({ error: 'Email non valida' });
+
+    // Create voter token directly (valid 24h)
+    const token = uuidv4();
+    await pool.query(
+      `INSERT INTO voter_tokens (email, token, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '24 hours')`,
+      [email, token]
+    );
+
+    res.json({ success: true, token, email });
+  } catch (err) {
+    console.error('Quick login error:', err);
+    res.status(500).json({ error: 'Errore nel login' });
+  }
+});
+
+// ========== VOTER AUTH: Request OTP (legacy, kept for compatibility) ==========
 router.post('/auth', async (req, res) => {
   try {
     const email = (req.body.email || '').trim().toLowerCase();

@@ -325,7 +325,7 @@
       <p>Jackie'O &bull; 7 Maggio 2026</p>
     </div>
 
-    <!-- Auth: Email -->
+    <!-- Auth: Email (direct login, no OTP) -->
     <div id="authEmail" class="auth-section">
       <h2>Accedi per votare</h2>
       <div class="input-group">
@@ -333,26 +333,7 @@
         <input type="email" id="emailInput" placeholder="nome@esempio.it" autocomplete="email" inputmode="email">
       </div>
       <div id="authEmailMsg"></div>
-      <button class="btn btn-primary" id="sendOtpBtn" onclick="sendOtp()">Invia codice di verifica</button>
-    </div>
-
-    <!-- Auth: OTP -->
-    <div id="authOtp" class="auth-section hidden">
-      <h2>Inserisci il codice</h2>
-      <p style="text-align:center; color:#aaa; font-size:0.85rem; margin-bottom:12px;">
-        Controlla la tua email <span id="otpEmailDisplay" style="color:#e94560"></span><br><span style="font-size:0.75rem;color:#888;">Non la trovi? Controlla anche nella cartella spam.</span>
-      </p>
-      <div class="otp-inputs" id="otpInputs">
-        <input type="tel" maxlength="1" data-idx="0">
-        <input type="tel" maxlength="1" data-idx="1">
-        <input type="tel" maxlength="1" data-idx="2">
-        <input type="tel" maxlength="1" data-idx="3">
-        <input type="tel" maxlength="1" data-idx="4">
-        <input type="tel" maxlength="1" data-idx="5">
-      </div>
-      <div id="authOtpMsg"></div>
-      <button class="btn btn-primary" id="verifyOtpBtn" onclick="verifyOtp()">Verifica</button>
-      <button class="btn btn-secondary" onclick="backToEmail()">Cambia email</button>
+      <button class="btn btn-primary" id="loginBtn" onclick="quickLogin()">Accedi</button>
     </div>
 
     <!-- Voting Area -->
@@ -370,39 +351,27 @@
     const API = '/api/vote';
     let voterToken = localStorage.getItem('voter_token');
     let voterEmail = localStorage.getItem('voter_email');
-    let currentEmail = '';
     let performers = [];
     let myVotes = {};
-    let refreshInterval = null;
 
     // Check if already authenticated
     if (voterToken && voterEmail) {
       showVotingArea();
     }
 
-    // OTP input auto-advance
-    document.querySelectorAll('#otpInputs input').forEach((inp, i, arr) => {
-      inp.addEventListener('input', () => {
-        if (inp.value && i < 5) arr[i+1].focus();
-      });
-      inp.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && !inp.value && i > 0) arr[i-1].focus();
-      });
-    });
-
-    async function sendOtp() {
+    async function quickLogin() {
       const email = document.getElementById('emailInput').value.trim().toLowerCase();
       if (!email || !email.includes('@')) {
         showMsg('authEmailMsg', 'Inserisci un indirizzo email valido', 'error');
         return;
       }
-      currentEmail = email;
-      const btn = document.getElementById('sendOtpBtn');
+
+      const btn = document.getElementById('loginBtn');
       btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span>Invio in corso...';
+      btn.innerHTML = '<span class="spinner"></span>Accesso...';
 
       try {
-        const res = await fetch(`${API}/auth`, {
+        const res = await fetch(`${API}/quick-login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email })
@@ -410,69 +379,31 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Errore');
 
-        document.getElementById('authEmail').classList.add('hidden');
-        document.getElementById('authOtp').classList.remove('hidden');
-        document.getElementById('otpEmailDisplay').textContent = email;
-        document.querySelectorAll('#otpInputs input')[0].focus();
-      } catch (e) {
-        showMsg('authEmailMsg', e.message, 'error');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Invia codice di verifica';
-      }
-    }
-
-    async function verifyOtp() {
-      const inputs = document.querySelectorAll('#otpInputs input');
-      const code = Array.from(inputs).map(i => i.value).join('');
-      if (code.length !== 6) {
-        showMsg('authOtpMsg', 'Inserisci tutti i 6 numeri', 'error');
-        return;
-      }
-
-      const btn = document.getElementById('verifyOtpBtn');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span>Verifica...';
-
-      try {
-        const res = await fetch(`${API}/verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: currentEmail, code })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Codice non valido');
-
         voterToken = data.token;
-        voterEmail = currentEmail;
+        voterEmail = email;
         localStorage.setItem('voter_token', voterToken);
         localStorage.setItem('voter_email', voterEmail);
         showVotingArea();
       } catch (e) {
-        showMsg('authOtpMsg', e.message, 'error');
-        inputs.forEach(i => i.value = '');
-        inputs[0].focus();
+        showMsg('authEmailMsg', e.message, 'error');
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Verifica';
+        btn.textContent = 'Accedi';
       }
     }
 
-    function backToEmail() {
-      document.getElementById('authOtp').classList.add('hidden');
-      document.getElementById('authEmail').classList.remove('hidden');
-      document.querySelectorAll('#otpInputs input').forEach(i => i.value = '');
-    }
-
     let eventSource = null;
+    let pollInterval = null;
 
     function showVotingArea() {
       document.getElementById('authEmail').classList.add('hidden');
-      document.getElementById('authOtp').classList.add('hidden');
       document.getElementById('votingArea').classList.remove('hidden');
       document.getElementById('voterEmailDisplay').textContent = voterEmail;
       loadPerformers();
       connectSSE();
+      // Polling di backup ogni 15s (in caso SSE cada silenziosamente)
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(loadPerformers, 15000);
     }
 
     function connectSSE() {
@@ -483,11 +414,18 @@
       eventSource.addEventListener('reset', () => loadPerformers());
       eventSource.addEventListener('songs-changed', () => loadPerformers());
       eventSource.onerror = () => {
-        // Reconnect after 5s on error
         eventSource.close();
         setTimeout(connectSSE, 5000);
       };
     }
+
+    // Ricarica quando la pagina torna visibile (utente sblocca telefono o torna alla tab)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && voterToken) {
+        loadPerformers();
+        connectSSE();
+      }
+    });
 
     function logout() {
       localStorage.removeItem('voter_token');
@@ -495,6 +433,7 @@
       voterToken = null;
       voterEmail = null;
       if (eventSource) { eventSource.close(); eventSource = null; }
+      if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
       document.getElementById('votingArea').classList.add('hidden');
       document.getElementById('authEmail').classList.remove('hidden');
       document.getElementById('emailInput').value = '';
@@ -683,9 +622,9 @@
       return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    // Enter key handlers
+    // Enter key handler
     document.getElementById('emailInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') sendOtp();
+      if (e.key === 'Enter') quickLogin();
     });
   </script>
 </body>
