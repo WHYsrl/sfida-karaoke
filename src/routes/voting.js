@@ -587,6 +587,31 @@ router.get('/admin/voter-stats', adminAuth, async (req, res) => {
   }
 });
 
+// ========== ADMIN: Add manual votes ==========
+router.post('/admin/add-vote', adminAuth, async (req, res) => {
+  try {
+    const { registration_id, score_preparation, score_performance, count } = req.body;
+    if (!registration_id || score_preparation == null || score_performance == null) {
+      return res.status(400).json({ error: 'registration_id, score_preparation, score_performance richiesti' });
+    }
+    const n = count || 1;
+    const inserted = [];
+    for (let i = 0; i < n; i++) {
+      const fakeEmail = `admin_manual_${Date.now()}_${i}@system.local`;
+      await pool.query(
+        `INSERT INTO votes (voter_email, registration_id, score_preparation, score_performance)
+         VALUES ($1, $2, $3, $4)`,
+        [fakeEmail, registration_id, score_preparation, score_performance]
+      );
+      inserted.push(fakeEmail);
+    }
+    res.json({ success: true, inserted: inserted.length });
+  } catch (err) {
+    console.error('Admin add vote error:', err);
+    res.status(500).json({ error: 'Errore nell\'inserimento voto manuale' });
+  }
+});
+
 // ========== ADMIN: Reset all votes ==========
 router.delete('/admin/reset-votes', adminAuth, async (req, res) => {
   try {
